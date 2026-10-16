@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B3D91">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>AI Control</title>
+<style>
+:root{
+  --blue:#0B3D91;--blue-2:#1B5FD1;--cyan:#00A3E0;--blue-soft:#E8EFFC;--bg:#EAF0FA;--card:#fff;--line:#E3E9F3;
+  --text:#101828;--mute:#667085;--ok:#12805C;--ok-bg:#E6F5EE;--warn:#B25E09;--warn-bg:#FFF3DF;--err:#C0392B;--err-bg:#FDECEA;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.08)
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(120% 90% at 50% 40%,#F6F9FF 0%,#E6EEFB 70%,#D9E5F8 100%);color:var(--text);
+  font:15px/1.45 system-ui,"Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column;height:100vh;height:100dvh;user-select:none;-webkit-user-select:none}
+input,select,pre,.res{user-select:text;-webkit-user-select:text}
+button{font:inherit;cursor:pointer}
+svg{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* ---------- thanh trên (gọn như app) ---------- */
+.top{background:linear-gradient(135deg,var(--blue),var(--blue-2));color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;flex:none;box-shadow:0 2px 12px rgba(11,61,145,.25);position:relative;z-index:5}
+.top-in{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;max-width:1100px;margin:0 auto;min-height:40px}
+.acts{display:flex;gap:8px;justify-self:end}
+.logo{justify-self:start;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:20px}
+.ttl{text-align:center;white-space:nowrap;line-height:1.2}.ttl b{display:block;font-size:25px;font-weight:800;letter-spacing:.5px}.ttl span{font-size:11.5px;opacity:.8}
+.iconbtn{width:36px;height:36px;border-radius:11px;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:19px;display:grid;place-items:center;position:relative}
+.iconbtn .cnt{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;border-radius:9px;background:#FBBF24;color:#3b2a00;font-size:10.5px;font-weight:800;display:none;place-items:center;padding:0 4px}
+.chips{max-width:1100px;margin:8px auto 0;display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border-radius:999px;padding:3px 9px;font-size:11px}
+.dot{width:8px;height:8px;border-radius:50%;background:#9aa7bd}.dot.on{background:#4ade80}.dot.warn{background:#fbbf24}
+/* ---------- sân khấu sơ đồ ---------- */
+#stageWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden}
+.stage{position:relative;flex:none;--u:4px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.stage.rot{cursor:grabbing}
+.node.lift{transform:translate(-50%,-50%) scale(1.18);z-index:6;transition:none;box-shadow:0 0 0 calc(var(--u)*.8) rgba(0,163,224,.5),0 calc(var(--u)*2) calc(var(--u)*5) rgba(11,61,145,.5)}
+#rings{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.orbit{fill:none;stroke:#9DB6E3;stroke-width:.25;stroke-dasharray:1 1.6;opacity:.8}
+.glow{fill:url(#gl);stroke:none}
+.spoke{stroke:#8FADE0;stroke-width:.45;stroke-dasharray:1.6 1.4;stroke-linecap:round;fill:none}
+.spoke.act{stroke:var(--blue-2);stroke-width:.7;animation:flow 1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-6}}
+.node{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:0;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*.5);
+  color:var(--blue);background:#fff;box-shadow:0 0 0 calc(var(--u)*.35) var(--blue),0 calc(var(--u)*1) calc(var(--u)*3) rgba(11,61,145,.22);
+  animation:pop .5s cubic-bezier(.2,.9,.3,1.3) backwards;transition:transform .15s,box-shadow .15s}
+.node .ni{display:grid;place-items:center;line-height:1}
+.node .nl{font-weight:700;text-align:center;line-height:1.12;font-size:max(9px,calc(var(--u)*2.7));padding:0 6%}
+.node.ready{color:#fff;background:radial-gradient(circle at 35% 30%,#2D7BEA,var(--blue) 72%);
+  box-shadow:0 0 0 calc(var(--u)*.8) rgba(27,95,209,.16),0 calc(var(--u)*1.2) calc(var(--u)*3.4) rgba(11,61,145,.42)}
+.node.ready .ni{font-size:calc(var(--u)*7.4);background:rgba(255,255,255,.16);color:#fff;border-radius:50%;padding:calc(var(--u)*.9)}
+.node.ready .nb{background:#22C55E;border-color:#fff}
+.node.ready.busy::after{border-color:var(--cyan)}
+.node.ready:hover{transform:translate(-50%,-50%) scale(1.07)}
+.node:active{transform:translate(-50%,-50%) scale(.94)}
+.node.soon{background:#F3F6FC;color:#8896B3;box-shadow:0 0 0 calc(var(--u)*.22) #CBD5E8,0 calc(var(--u)*.6) calc(var(--u)*2) rgba(11,61,145,.08)}
+.node.soon .ni{font-size:calc(var(--u)*4.6)}
+.node.soon .nl{font-size:max(9px,calc(var(--u)*2.3));font-weight:600}
+.node .nb{position:absolute;top:6%;right:6%;width:calc(var(--u)*2.6);height:calc(var(--u)*2.6);border-radius:50%;background:#22C55E;border:calc(var(--u)*.4) solid #fff}
+.node.soon .nb{display:none}
+.node.busy::after,.node.wait::after{content:"";position:absolute;inset:calc(var(--u)*-1.2);border-radius:50%;border:calc(var(--u)*.5) solid var(--blue-2);animation:ring 1.2s ease-out infinite}
+.node.wait::after{border-color:#F59E0B}
+@keyframes ring{from{transform:scale(.92);opacity:.9}to{transform:scale(1.12);opacity:0}}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-50%) scale(.3)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.hub{position:absolute;left:50%;top:50%;width:21%;height:21%;transform:translate(-50%,-50%);border-radius:50%;border:0;color:#fff;
+  background:radial-gradient(circle at 35% 30%,#2D7BEA,var(--blue) 70%);box-shadow:0 0 0 calc(var(--u)*1) rgba(27,95,209,.16),0 calc(var(--u)*1.4) calc(var(--u)*4) rgba(11,61,145,.45);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.hub::before{content:"";position:absolute;inset:calc(var(--u)*-1.6);border-radius:50%;border:calc(var(--u)*.45) solid transparent;border-top-color:var(--cyan);border-right-color:var(--cyan);animation:spin 3.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hub b{font-size:calc(var(--u)*4.6);letter-spacing:.5px}
+.hub small{font-size:max(9px,calc(var(--u)*2.5));opacity:.92;margin-top:calc(var(--u)*.4);text-align:center;padding:0 8%}
+.hub .cnt{position:absolute;top:2%;right:2%;min-width:calc(var(--u)*4);height:calc(var(--u)*4);border-radius:50%;background:#FBBF24;color:#3b2a00;font-weight:800;font-size:max(10px,calc(var(--u)*2.6));display:none;place-items:center;border:calc(var(--u)*.4) solid #fff}
+/* ---------- thanh ra lệnh dưới cùng ---------- */
+.dock{display:none;flex:none;padding:6px 12px 4px;max-width:720px;width:100%;margin:0 auto}
+.cmd{display:flex;gap:8px;align-items:center;background:#fff;border-radius:999px;padding:6px 6px 6px 16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.cmd input{flex:1;min-width:0;border:0;background:transparent;font-size:16px;outline:none;padding:8px 0}
+.cmd button{width:42px;height:42px;border-radius:50%;border:0;font-size:19px;display:grid;place-items:center;flex:none}
+.btn-mic{background:var(--blue-soft);color:var(--blue)}.btn-mic.rec{background:var(--err);color:#fff;animation:pulse 1s infinite}
+.btn-go{background:var(--blue);color:#fff}
+.hint{font-size:11.5px;color:var(--mute);margin:6px 12px 0;text-align:center}
+@keyframes pulse{50%{opacity:.6}}
+/* ---------- danh sách việc (trong cửa sổ) ---------- */
+h3.sec{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--mute);margin:20px 2px 4px;font-weight:700}
+.job{display:flex;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.job:last-child{border:0}
+.job .ji{width:38px;height:38px;border-radius:11px;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:19px}
+.job .jt{flex:1;min-width:0}.job .jt b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job .jt span{font-size:12px;color:var(--mute)}
+.tag{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.tag.queued,.tag.running{background:var(--blue-soft);color:var(--blue)}
+.tag.await_confirm{background:var(--warn-bg);color:var(--warn)}
+.tag.confirmed{background:var(--blue-soft);color:var(--blue)}
+.tag.done{background:var(--ok-bg);color:var(--ok)}.tag.error{background:var(--err-bg);color:var(--err)}.tag.cancelled{background:#EEF1F6;color:var(--mute)}
+.empty{color:var(--mute);text-align:center;padding:18px 0;font-size:13px}
+/* ---------- cửa sổ: trượt từ dưới (điện thoại) / ngăn bên phải (máy tính) ---------- */
+.back{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:640px;background:#fff;border-radius:22px 22px 0 0;z-index:21;
+  max-height:92vh;overflow:auto;transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1);padding:8px 18px calc(20px + env(safe-area-inset-bottom))}
+.sheet.open{transform:none}
+.grab{width:42px;height:4px;border-radius:4px;background:#D0D5DD;margin:6px auto 14px}
+@media (min-width:900px){
+  .sheet{left:auto;right:0;top:0;bottom:0;max-width:440px;width:440px;max-height:none;border-radius:0;transform:translateX(105%);padding:22px 24px;box-shadow:-8px 0 30px rgba(16,24,40,.18)}
+  .sheet.open{transform:none}.grab{display:none}.back{background:rgba(16,24,40,.25)}
+}
+.sh-h{display:flex;gap:12px;align-items:center;margin-bottom:4px}
+.sh-h .ic{width:44px;height:44px;border-radius:13px;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:23px}
+.sh-h b{font-size:18px;color:var(--blue)}.sh-d{color:var(--mute);font-size:13px;margin:2px 0 8px}
+label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+label i{color:var(--err);font-style:normal}
+.sheet input,.sheet select{width:100%;border:1px solid #D0D5DD;border-radius:12px;padding:13px 12px;font-size:16px;background:#fff;color:var(--text);outline:none}
+.sheet input:focus,.sheet select:focus{border-color:var(--blue-2);box-shadow:0 0 0 3px rgba(27,95,209,.14)}
+.sub{font-size:12px;color:var(--mute);margin-top:4px}
+.btn{width:100%;border:0;border-radius:13px;padding:14px;font-size:16px;font-weight:700;margin-top:18px;background:var(--blue);color:#fff}
+.btn.sec{background:var(--blue-soft);color:var(--blue);margin-top:10px}.btn.danger{background:var(--err-bg);color:var(--err)}
+.btn.ok{background:var(--ok);color:#fff}.btn:disabled{opacity:.55}
+.note{border-radius:12px;padding:11px 12px;font-size:13px;margin-top:14px;background:var(--warn-bg);color:#7A4306}
+.note.info{background:var(--blue-soft);color:#12326B}.note.err{background:var(--err-bg);color:#8E2A20}
+pre.res{white-space:pre-wrap;word-break:break-word;background:#F8FAFD;border:1px solid var(--line);border-radius:12px;padding:12px;font:13px/1.5 ui-monospace,Consolas,monospace;margin:10px 0 0;max-height:260px;overflow:auto}
+.steps{display:flex;gap:4px;margin:14px 0 4px}.steps i{flex:1;height:5px;border-radius:5px;background:#E3E9F3}.steps i.on{background:var(--blue-2)}.steps i.fin{background:var(--ok)}.steps i.bad{background:var(--err)}
+.link{display:flex;gap:8px;align-items:center;background:var(--ok-bg);color:var(--ok);padding:12px;border-radius:12px;margin-top:10px;font-weight:700;text-decoration:none}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#101828;color:#fff;padding:11px 16px;border-radius:14px;
+  font-size:14px;display:none;z-index:40;max-width:90%;text-align:center}
+.hide{display:none!important}
+.dock.open{display:block;animation:dockIn .22s ease-out}@keyframes dockIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* Mọi nút chức năng: cùng kích thước, cùng nền xanh VNPT (chấm xanh lá chỉ có ở nút đã nối) */
+.node.soon{color:#fff;background:radial-gradient(circle at 35% 30%,#2D7BEA,var(--blue) 72%);
+  box-shadow:0 0 0 calc(var(--u)*.8) rgba(27,95,209,.16),0 calc(var(--u)*1.2) calc(var(--u)*3.4) rgba(11,61,145,.42)}
+.node.soon:hover{transform:translate(-50%,-50%) scale(1.07)}
+.node.ready .ni,.node.soon .ni{font-size:calc(var(--u)*5.6);background:rgba(255,255,255,.16);color:#fff;border-radius:50%;padding:calc(var(--u)*.7)}
+.node.ready .nl,.node.soon .nl{font-size:max(9px,calc(var(--u)*2.45));font-weight:700;padding:0 5%}
+.node.soon{opacity:.86}
+.gm{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px;margin-top:10px;color:var(--text)}
+.gm .ic{width:40px;height:40px;border-radius:12px;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:21px;flex:none}
+.gm b{display:block;font-size:15px;color:var(--blue)}.gm small{display:block;font-size:12px;color:var(--mute);margin-top:2px}.gm i{margin-left:auto;font-style:normal;font-size:22px;color:var(--mute)}
+.pwr{flex:none;text-align:center;font-size:11.5px;color:var(--mute);letter-spacing:.3px;padding:4px 0 calc(10px + env(safe-area-inset-bottom))}
+.pwr b{color:var(--blue);font-weight:700}
+/* Hỗ trợ khách */
+.ht-card{background:#F8FAFD;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:14px}
+.ht-card h4{margin:0 0 4px;font-size:14px;color:var(--blue)}
+.ht-it{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;background:#fff}
+.ht-it .id{font:700 18px/1.1 ui-monospace,Consolas,monospace;color:var(--blue);letter-spacing:.5px}
+.ht-it .mt{font-size:12px;color:var(--mute)}
+.ht-it .b1{margin-left:auto;border:0;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
+.ht-it .b2{border:0;background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 11px;font-weight:700}
+@media (prefers-reduced-motion:reduce){.node,.hub::before,.spoke.act,.node.busy::after,.node.wait::after{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="logo" id="logo"></div>
+    <div class="ttl"><b>AI Control</b></div>
+    <div class="acts"><button class="iconbtn" id="installBox" aria-label="Cài app lên màn hình chính" title="Cài app" style="display:none"></button>
+    <button class="iconbtn" id="btnAct" aria-label="Hoạt động gần đây"><span class="cnt" id="cntTop"></span></button>
+    <button class="iconbtn" id="btnSet" aria-label="Cài đặt"></button></div>
+  </div>
+  <div class="chips">
+    <span class="chip"><i class="dot" id="dBack"></i><span id="tBack">Đang kiểm tra…</span></span>
+    <span class="chip"><i class="dot" id="dAgent"></i><span id="tAgent">Máy tính</span></span>
+    <span class="chip"><i class="dot" id="dExt"></i><span id="tExt">Chrome</span></span>
+  </div>
+</header>
+
+<div id="stageWrap">
+  <div class="stage" id="stage">
+    <svg id="rings" viewBox="0 0 100 100" aria-hidden="true"></svg>
+    <div id="nodes"></div>
+    <button class="hub" id="hub" aria-label="Nhập lệnh cho AI Control"><b>AI</b><small id="hubTxt">Control</small><span class="cnt" id="cntHub"></span></button>
+  </div>
+</div>
+
+<footer class="dock">
+  <form class="cmd" id="cmdForm">
+    <input id="cmdInput" placeholder="Ra lệnh: báo giá van 100 cho 3801284888" autocomplete="off" enterkeyhint="send">
+    <button type="button" class="btn-mic" id="btnMic" aria-label="Nói"></button>
+    <button class="btn-go" aria-label="Gửi" id="btnGo"></button>
+  </form>
+  <p class="hint" id="cmdHint">Chạm để mở · kéo để xoay vòng · giữ rồi kéo để đổi chỗ</p>
+</footer>
+<div class="pwr" id="pwr">Powered by <b>Biểu ViO</b></div>
+
+<div class="back" id="back"></div>
+<div class="sheet" id="sheet"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. ICON (SVG nội tuyến, phong cách nét mảnh)
+   ===================================================================== */
+var IC = {
+  quote:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/>',
+  contract:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 17c1.5-3 2.5-3 3-1s1.5 1.5 3-1"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5 12 16l2.5-2.5"/>',
+  upload:'<path d="M12 16V5M7.5 9.5 12 5l4.5 4.5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  chip:'<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  download:'<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>',
+  send:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  wrench:'<path d="M14.7 6.3a4 4 0 0 0 5 5L21 12.5 12.5 21 3 11.5 11.5 3z" transform="scale(.8) translate(3 3)"/><path d="M9 15l-4 4"/>',
+  word:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M8.5 12l1.5 6 2-5 2 5 1.5-6"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  spark:'<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',
+  phone:'<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  wallet:'<path d="M3 7a2 2 0 0 1 2-2h12v4"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14.5" r="1.2"/>',
+  headset:'<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M19 20a4 4 0 0 1-4 2h-2"/>',
+  bell:'<path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+  refresh:'<path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/>',
+  share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  file:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
+};
+function svg(n){ return '<svg viewBox="0 0 24 24">'+(IC[n]||IC.chip)+'</svg>'; }
+
+/* =====================================================================
+   2. DANH SÁCH TOOL – thêm tool mới chỉ cần thêm 1 dòng ở đây
+   ready=true: đã nối chức năng. ready=false: bấm vào báo "đang nâng cấp".
+   ===================================================================== */
+/* Bảng giá TỔNG TIỀN (đã gồm 8% VAT) dùng để tự điền ô "Tổng tiền" của tool Hợp đồng.
+   Nguồn: bao_gia.md mục 5.1, 5.2, 5.5. Dịch vụ không có trong bảng (BHXH gia hạn, Hóa đơn điện tử) → để anh nhập tay. */
+var PRICE_CA = { capMoi:{"CA 1 năm":1789855,"CA 2 năm":2690182,"CA 3 năm":3055418},      // gồm USB token
+                 giaHan:{"CA 1 năm":1249855,"CA 2 năm":2151164,"CA 3 năm":2859055} };
+var PRICE_VAN = { "10":{"18":216000,"33":345600,"48":410400,"60":518400},
+                  "100":{"18":540000,"33":864000,"48":1026000,"60":1296000},
+                  "1000":{"18":864000,"33":1382400,"48":1641600,"60":1900800},
+                  "max":{"18":1188000,"33":1900800,"48":2257200,"60":2538000} };
+function contractPrice(v){
+  if(v.nhom_dv==="BHXH VAN") return (PRICE_VAN[v.van_goi]||{})[v.van_thang]||0;
+  return ((PRICE_CA[v.loai==="giaHan"?"giaHan":"capMoi"])||{})[v.nhom_dv]||0;
+}
+function fmtMoney(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
+var DV_VAN = [["VAN10","VNPT-VAN 10"],["VAN100","VNPT-VAN 100"],["VAN1000","VNPT-VAN 1000"],["VANMax","VNPT-VAN Max"]];
+var TOOLS = [
+  {id:"bao_gia", short:"Báo giá", name:"Báo giá", sub:"Tạo báo giá PDF/Word có mộc", icon:"quote", ready:true, risk:"R1",
+   desc:"Máy tính của anh dựng báo giá bằng tool có sẵn, kết quả gửi về điện thoại dạng file PDF.",
+   fields:[
+     {k:"mst", label:"Mã số thuế", type:"text", mode:"numeric", req:true, lookup:true},
+     {k:"ten", label:"Tên công ty", type:"text", req:true, sub:"Tự điền khi nhập đủ MST (tra theo dữ liệu Thuế), anh vẫn sửa được"},
+     {k:"dich_vu", label:"Dịch vụ", type:"select", req:true, opts:[["ca_moi","VNPT-CA mua mới"],["ca_gia_han","VNPT-CA gia hạn"],["hoa_don","Hóa đơn điện tử"],["van","VNPT-BHXH / VAN"],["leased_line","Internet Leased Line"],["lms","vnEdu LMS"]]},
+     {k:"goi", label:"Gói VAN", type:"select", when:["dich_vu","van"], opts:[["","Hiện đủ bảng 4 gói"]].concat(DV_VAN)},
+     {k:"qt", label:"Tốc độ quốc tế (Mbps)", type:"select", req:true, when:["dich_vu","leased_line"], opts:[["200","200"],["300","300"],["400","400"],["500","500"]]},
+     {k:"nhom", label:"Nhóm khách hàng", type:"select", req:true, when:["dich_vu","lms"], opts:[["truong","Trường học"],["so","Sở / Phòng giáo dục"]]},
+     {k:"ky_han", label:"Kỳ hạn (tháng)", type:"select", when:["dich_vu","lms"], opts:[["","Hiện đủ bảng"],["6","6"],["9","9"],["12","12"],["24","24"],["36","36"]]},
+     {k:"dinh_dang", label:"Định dạng file", type:"select", opts:[["pdf","PDF"],["word","Word"],["pdf,word","PDF + Word"]]},
+     {k:"moc", label:"Treo mộc VNPT Chơn Thành", type:"select", opts:[["yes","Có"],["no","Không"]]}
+   ]},
+  {id:"hop_dong_web", short:"Hợp đồng", name:"Hợp đồng", sub:"hopdong.vnpt.vn, điền sẵn tới trước nút Lưu", icon:"contract", ready:true, risk:"R2",
+   desc:"Chrome trên máy tính tự điền hợp đồng. Dừng trước nút Lưu để anh xác nhận và tự bấm Lưu.",
+   fields:[
+     {k:"mst", label:"Mã số thuế", type:"text", mode:"numeric", req:true, lookup:true},
+     {k:"ten", label:"Tên khách hàng", type:"text", sub:"Chỉ cần khi MST tra cứu không ra"},
+     {k:"nhom_dv", label:"Dịch vụ", type:"select", req:true, opts:[["CA 1 năm","CA 1 năm"],["CA 2 năm","CA 2 năm"],["CA 3 năm","CA 3 năm"],["BHXH VAN","BHXH VAN"],["BHXH gia hạn","BHXH gia hạn"],["Hóa đơn điện tử TT78","Hóa đơn điện tử TT78"],["Hóa đơn điện tử máy tính tiền","Hóa đơn điện tử máy tính tiền"]]},
+     {k:"van_goi", label:"Gói VAN", type:"select", when:["nhom_dv","BHXH VAN"], opts:[["10","VAN 10"],["100","VAN 100"],["1000","VAN 1000"],["max","VAN Max"]]},
+     {k:"van_thang", label:"Thời hạn", type:"select", when:["nhom_dv","BHXH VAN"], opts:[["18","18 tháng"],["33","33 tháng"],["48","48 tháng"],["60","60 tháng"]]},
+     {k:"loai", label:"Hình thức", type:"select", opts:[["capMoi","Cấp mới"],["giaHan","Gia hạn"]]},
+     {k:"tong_tien", label:"Tổng tiền (đã gồm VAT)", type:"text", mode:"numeric", req:true, sub:"Chỉ nhập số, ví dụ 1249855"}
+   ],
+   price:function(v){ return contractPrice(v); },
+   build:function(p){ if(p.nhom_dv==="BHXH VAN"){ p.dich_vu="BHXH VAN "+p.van_goi+" - "+p.van_thang+" tháng"; } else { p.dich_vu=p.nhom_dv; } delete p.nhom_dv; delete p.van_goi; delete p.van_thang; return p; }},
+  {id:"phan_loai", parent:"hop_dong_web", short:"Phân loại HĐ", name:"Phân loại hợp đồng", sub:"Copy PDF đã ký vào folder khách hàng", icon:"folder", ready:true, risk:"R1",
+   desc:"Chạy thử trước để xem sẽ copy gì và khách nào chưa có trong bảng alias. Anh xác nhận rồi mới copy thật.",
+   fields:[ {k:"thang", label:"Tháng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"Tháng "+m];})} ]},
+  /* Tool dạng liên kết: bấm là mở app có sẵn (không đi qua hàng đợi). Đổi link ở đây nếu app đổi địa chỉ. */
+  {id:"cong_no", short:"My Data", name:"My Data", sub:"Mở app theo dõi công nợ", icon:"wallet", ready:true, risk:"R0",
+   link:"https://claude.ai/artifact/JXWt6JKKdSF9NmBWHEdgJg"},
+  /* Tool Hỗ trợ khách: không qua hàng đợi, mở màn riêng (gửi tool + kết nối RustDesk) */
+  {id:"ho_tro", short:"Hỗ trợ", name:"Hỗ trợ khách hàng", sub:"Gửi tool cho khách, kết nối RustDesk", icon:"headset", ready:true, risk:"R0", support:true},
+  /* Tìm file trên máy (ổ D, Downloads, Desktop). Bấm vào kết quả để lấy file về điện thoại / gửi Zalo. */
+  {id:"tim_file", explorer:true, short:"My Computer", name:"My Computer", sub:"Duyệt, xem, sửa, copy, tải lên/về: ổ D, Downloads, Desktop", icon:"search", ready:true, risk:"R0",
+   desc:"Máy tính tìm theo tên file, tên khách hoặc MST (gõ không dấu cũng được; nhiều từ thì phải có đủ các từ). Bấm vào kết quả để lấy file về điện thoại hoặc gửi Zalo.",
+   fields:[
+     {k:"q", label:"Tìm gì", type:"text", req:true, sub:"Ví dụ: bao gia new hope · 3801294420 · bbnt botai"},
+     {k:"loai", label:"Loại file", type:"select", opts:[["","Tất cả"],["pdf","PDF"],["word","Word"],["excel","Excel"],["anh","Ảnh"],["thu_muc","Thư mục"]]},
+     {k:"noi", label:"Tìm ở đâu", type:"select", opts:[["","Cả 3 nơi"],["d","Ổ D"],["downloads","Downloads"],["desktop","Desktop"]]}
+   ]},
+  /* Việc ẩn: lấy 1 file về điện thoại (gọi từ danh sách kết quả Tìm file, không hiện trên sơ đồ) */
+  {id:"lay_file", hidden:true, glow:"tim_file", short:"Lấy file", name:"Lấy file", sub:"Gửi file từ máy tính về điện thoại", icon:"download", ready:true, risk:"R0", fields:[]},
+  /* Các việc ẩn của màn "My Computer" (explorer.js) – chỉ để hiện đúng tên trong lịch sử */
+  {id:"doc_file", hidden:true, glow:"tim_file", short:"Xem file", name:"Xem file", sub:"", icon:"file", ready:true, risk:"R0", fields:[]},
+  {id:"sua_file", hidden:true, glow:"tim_file", short:"Sửa file", name:"Sửa file", sub:"", icon:"word", ready:true, risk:"R1", fields:[]},
+  {id:"copy_file", hidden:true, glow:"tim_file", short:"Copy file", name:"Copy / di chuyển", sub:"", icon:"folder", ready:true, risk:"R1", fields:[]},
+  {id:"tao_thu_muc", hidden:true, glow:"tim_file", short:"Thư mục mới", name:"Tạo thư mục", sub:"", icon:"folder", ready:true, risk:"R1", fields:[]},
+  {id:"nhan_file", hidden:true, glow:"tim_file", short:"Tải lên", name:"Gửi file lên máy", sub:"", icon:"upload", ready:true, risk:"R1", fields:[]},
+  /* Chưa liên kết: sẽ nối với app công nợ ở bước sau (đổi ready:true và thêm cách chạy khi nối) */
+  {id:"nhac_no", short:"Nhắc nợ", name:"Nhắc nợ khách hàng", sub:"Gửi nhắc nợ qua email/Zalo", icon:"bell", ready:false},
+  {id:"onebss", short:"OneBSS", name:"OneBSS", sub:"Upload hồ sơ, gia hạn CA/SmartCA", icon:"upload", ready:false},
+  {id:"vnedu_admin", group:true, short:"Admin vnEdu", name:"Admin vnEdu", sub:"Công cụ quản trị vnEdu", icon:"users", ready:false},
+  {id:"vnedu_serial", parent:"vnedu_admin", short:"Serial vnEdu", name:"vnEdu – Serial", sub:"Cập nhật serial SmartCA giáo viên", icon:"users", ready:false},
+  {id:"vnedu_sync", parent:"vnedu_admin", short:"Sync vnEdu", name:"VNEDU Sync Analyzer", sub:"Phân tích lịch sử đồng bộ", icon:"chart", ready:false},
+  {id:"hoadon_pdf", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
+  {id:"invoice_kh", short:"DL khách", name:"Dữ liệu KH Invoice", sub:"Xuất email, tên, MST khách", icon:"users", ready:false},
+  {id:"trinh_ky", parent:"hop_dong_web", short:"Trình ký", name:"Chuyển trình hàng loạt", sub:"Chuyển trình và tải PDF hợp đồng", icon:"send", ready:false},
+  {id:"ca_plugin", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},
+  {id:"hd_word", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false}
+];
+function toolById(id){ return TOOLS.filter(function(t){return t.id===id;})[0]; }
+
+/* =====================================================================
+   3. CẤU HÌNH KẾT NỐI (lưu localStorage, không ghi cứng trong code)
+   Có thể nạp nhanh bằng đường dẫn dạng  .../index.html#cfg=<base64>
+   ===================================================================== */
+var CFG = {url:"", token:""};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function loadCfg(){
+  try{ var c=JSON.parse(lsGet("aic_cfg")||"{}"); CFG.url=c.url||""; CFG.token=c.token||""; }catch(e){}
+}
+function saveCfg(url, token){ CFG.url=(url||"").trim(); CFG.token=(token||"").trim(); lsSet("aic_cfg", JSON.stringify(CFG)); }
+function importCfgFromHash(){
+  var m=(location.hash||"").match(/cfg=([A-Za-z0-9+\/=_-]+)/); if(!m) return false;
+  try{
+    var o=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/")))));
+    if(o.u && o.t){ saveCfg(o.u,o.t); history.replaceState(null,"",location.pathname); return true; }
+  }catch(e){}
+  return false;
+}
+function connected(){ return !!(CFG.url && CFG.token); }
+
+/* =====================================================================
+   4. GỌI BACKEND (fetch POST text/plain để tránh lỗi CORS của Apps Script)
+   ===================================================================== */
+function api(action, data){
+  if(!connected()) return Promise.reject(new Error("Chưa kết nối backend"));
+  var body = JSON.stringify(Object.assign({token:CFG.token, action:action}, data||{}));
+  return fetch(CFG.url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:body, redirect:"follow"})
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(!j.ok) throw new Error(j.error||"Lỗi backend"); return j; });
+}
+
+/* =====================================================================
+   5. HÀNG ĐỢI LỆNH (có chế độ Demo khi chưa kết nối)
+   ===================================================================== */
+var JOBS = [];
+function loadLocalJobs(){ try{ return JSON.parse(lsGet("aic_jobs")||"[]"); }catch(e){ return []; } }
+function saveLocalJobs(a){ lsSet("aic_jobs", JSON.stringify(a.slice(0,20))); }
+
+function submitJob(tool, params){
+  if(!connected()){                       // Demo: chỉ mô phỏng, không chạy tool thật
+    var j={id:"D"+Date.now(), thoi_gian:new Date().toISOString(), tool:tool.id, params:params, trang_thai:"done", ket_qua:"Chế độ Demo: chưa kết nối backend nên chưa chạy tool thật. Vào Cài đặt để kết nối."};
+    var a=loadLocalJobs(); a.unshift(j); saveLocalJobs(a); JOBS=a; renderJobs(); return Promise.resolve(j);
+  }
+  return api("job.enqueue",{tool:tool.id, params:params}).then(function(r){ refreshJobs(); return r; });
+}
+function refreshJobs(){
+  if(!connected()){ JOBS=loadLocalJobs(); renderJobs(); return Promise.resolve(); }
+  return api("job.list",{limit:12}).then(function(r){ JOBS=r.jobs||[]; renderJobs(); if(openJobId) renderJobSheet(); }).catch(function(){});
+}
+function hasActive(){ return JOBS.some(function(j){ return ["queued","running","await_confirm","confirmed"].indexOf(j.trang_thai)>=0; }); }
+
+/* =====================================================================
+   6. HIỂN THỊ
+   ===================================================================== */
+var STATE_VN = {queued:"Đang chờ máy", running:"Đang chạy", await_confirm:"Chờ xác nhận", confirmed:"Đã xác nhận", done:"Hoàn tất", error:"Lỗi", cancelled:"Đã hủy"};
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function el(id){ return document.getElementById(id); }
+
+/* Sơ đồ trung tâm: tool "sẵn sàng" ở vòng trong, tool "đang nâng cấp" ở vòng ngoài.
+   Thêm tool mới ở mảng TOOLS, sơ đồ tự xếp lại vị trí. */
+function polar(r,deg){ var a=deg*Math.PI/180; return [50+r*Math.cos(a), 50+r*Math.sin(a)]; }
+/* Bố cục sơ đồ do người dùng sắp xếp (xoay vòng / đổi chỗ), lưu trong localStorage "aic_lay". */
+var RING={ "in":{r:25,d:15.5,start:-90,key:"rIn"}, "out":{r:42,d:15.5,start:-67.5,key:"rOut"} };
+var LAY={"in":[],"out":[],rIn:0,rOut:0}, dragNode=null, suppressUntil=0, G=null;
+function loadLay(){
+  var l=null; try{ l=JSON.parse(lsGet("aic_lay")||"null"); }catch(e){}
+  l=l||{}; LAY={"in":l["in"]||[],"out":l.out||[],rIn:+l.rIn||0,rOut:+l.rOut||0};
+  var rd=TOOLS.filter(function(t){return t.ready && !t.parent && !t.hidden;}).map(function(t){return t.id;});
+  var sn=TOOLS.filter(function(t){return !t.ready && !t.parent && !t.hidden;}).map(function(t){return t.id;});
+  // giữ thứ tự đã lưu, bỏ tool không còn, thêm tool mới vào cuối
+  LAY["in"]=LAY["in"].filter(function(id){return rd.indexOf(id)>=0;}).concat(rd.filter(function(id){return LAY["in"].indexOf(id)<0;}));
+  LAY.out=LAY.out.filter(function(id){return sn.indexOf(id)>=0;}).concat(sn.filter(function(id){return LAY.out.indexOf(id)<0;}));
+}
+function saveLay(){ lsSet("aic_lay",JSON.stringify(LAY)); }
+function placeAll(){
+  ["in","out"].forEach(function(k){
+    var cfg=RING[k], arr=LAY[k];
+    arr.forEach(function(id,i){
+      var pos=polar(cfg.r, cfg.start+LAY[cfg.key]+i*360/arr.length);
+      var nd=el("nd_"+id), sp=el("sp_"+id);
+      if(nd && nd!==dragNode){ nd.style.left=pos[0].toFixed(2)+"%"; nd.style.top=pos[1].toFixed(2)+"%"; }
+      if(sp){ sp.setAttribute("x2",pos[0].toFixed(2)); sp.setAttribute("y2",pos[1].toFixed(2)); }
+    });
+  });
+}
+function renderHub(){
+  loadLay();
+  var svgH='<defs><radialGradient id="gl"><stop offset="0" stop-color="#2D7BEA" stop-opacity=".18"/><stop offset="1" stop-color="#2D7BEA" stop-opacity="0"/></radialGradient></defs>'+
+    '<circle class="glow" cx="50" cy="50" r="48"/><circle class="orbit" cx="50" cy="50" r="25"/><circle class="orbit" cx="50" cy="50" r="42"/>';
+  var html="";
+  ["in","out"].forEach(function(k,ri){
+    var cfg=RING[k], ready=(k==="in");
+    LAY[k].forEach(function(id,i){
+      var t=toolById(id); if(!t) return;
+      if(ready) svgH+='<line class="spoke" id="sp_'+t.id+'" x1="50" y1="50" x2="50" y2="50"/>';
+      html+='<button class="node '+(ready?"ready":"soon")+'" data-t="'+t.id+'" id="nd_'+t.id+'" aria-label="'+esc(t.name)+'" style="width:'+cfg.d+'%;height:'+cfg.d+'%;animation-delay:'+(i*70+(ready?0:200))+'ms">'+
+        '<i class="nb"></i><span class="ni">'+svg(t.icon)+'</span><span class="nl">'+esc(t.short||t.name)+'</span></button>';
+    });
+  });
+  el("rings").innerHTML=svgH; el("nodes").innerHTML=html;
+  placeAll(); fitStage();
+}
+/* Hoạt ảnh xoay nhẹ về vị trí khớp ô gần nhất */
+function snapRing(k){
+  var cfg=RING[k], n=LAY[k].length||1, step=360/n, from=LAY[cfg.key], to=Math.round(from/step)*step, t0=performance.now();
+  function f(t){ var q=Math.min(1,(t-t0)/180); q=1-Math.pow(1-q,3); LAY[cfg.key]=from+(to-from)*q; placeAll(); if(q<1) requestAnimationFrame(f); else { LAY[cfg.key]=((to%360)+360)%360; placeAll(); saveLay(); } }
+  requestAnimationFrame(f);
+}
+/* Kéo để xoay vòng; giữ ~0,5 giây rồi kéo để đổi chỗ với biểu tượng khác cùng vòng */
+(function(){
+  var st=el("stage");
+  function end(e,cancel){
+    window.removeEventListener("pointermove",mv); window.removeEventListener("pointerup",up); window.removeEventListener("pointercancel",cn);
+    if(!G) return; clearTimeout(G.timer); st.classList.remove("rot");
+    var g=G; G=null;
+    if(g.mode==="rot"){ suppressUntil=Date.now()+350; snapRing(g.key); }
+    else if(g.mode==="swap"){
+      suppressUntil=Date.now()+350;
+      var tg=null; if(!cancel){ var u=document.elementFromPoint(e.clientX,e.clientY); tg=u&&u.closest?u.closest(".node"):null; }
+      var nd=g.nd; nd.classList.remove("lift"); nd.style.pointerEvents=""; dragNode=null;
+      if(tg && tg!==nd && tg.classList.contains("ready")===nd.classList.contains("ready")){
+        var arr=LAY[g.key], i1=arr.indexOf(nd.dataset.t), i2=arr.indexOf(tg.dataset.t);
+        if(i1>=0&&i2>=0){ var x=arr[i1]; arr[i1]=arr[i2]; arr[i2]=x; saveLay(); toast("Đã đổi chỗ"); }
+      }
+      placeAll();
+    }
+  }
+  function mv(e){
+    if(!G) return;
+    if(!G.mode && Math.hypot(e.clientX-G.x0,e.clientY-G.y0)>8){ clearTimeout(G.timer); G.mode="rot"; st.classList.add("rot"); }
+    if(G.mode==="rot"){
+      var a=Math.atan2(e.clientY-G.cy,e.clientX-G.cx), d=a-G.prev; if(d>Math.PI) d-=2*Math.PI; if(d<-Math.PI) d+=2*Math.PI;
+      G.prev=a; G.acc+=d; LAY[RING[G.key].key]=G.rot0+G.acc*180/Math.PI; placeAll();
+    } else if(G.mode==="swap"){
+      var rc=st.getBoundingClientRect();
+      G.nd.style.left=((e.clientX-rc.left)/rc.width*100).toFixed(2)+"%"; G.nd.style.top=((e.clientY-rc.top)/rc.height*100).toFixed(2)+"%";
+    }
+  }
+  function up(e){ end(e,false); } function cn(e){ end(e,true); }
+  st.addEventListener("pointerdown",function(e){
+    if(e.button>0 || e.target.closest(".hub")) return;
+    var rc=st.getBoundingClientRect(), cx=rc.left+rc.width/2, cy=rc.top+rc.height/2;
+    var nd=e.target.closest(".node"), dist=Math.hypot(e.clientX-cx,e.clientY-cy)/(rc.width/2)*50;
+    if(!nd && dist>50) return;
+    var key = nd ? (nd.classList.contains("ready")?"in":"out") : (dist<33.5?"in":"out");
+    var a0=Math.atan2(e.clientY-cy,e.clientX-cx);
+    G={nd:nd,key:key,cx:cx,cy:cy,x0:e.clientX,y0:e.clientY,prev:a0,acc:0,rot0:LAY[RING[key].key],mode:"",timer:null};
+    if(nd) G.timer=setTimeout(function(){ if(G && !G.mode){ G.mode="swap"; dragNode=G.nd; G.nd.classList.add("lift"); G.nd.style.pointerEvents="none"; if(navigator.vibrate) navigator.vibrate(15); } },450);
+    window.addEventListener("pointermove",mv); window.addEventListener("pointerup",up); window.addEventListener("pointercancel",cn);
+  });
+})();
+function fitStage(){
+  var w=el("stageWrap"), st=el("stage"), sz=Math.floor(Math.min(w.clientWidth-12, w.clientHeight-12)); if(sz<200) sz=200;
+  st.style.width=st.style.height=sz+"px"; st.style.setProperty("--u",(sz/100)+"px");
+}
+window.addEventListener("resize",fitStage);
+if(window.ResizeObserver) new ResizeObserver(fitStage).observe(el("stageWrap"));
+
+function summary(j){
+  var p=j.params||{};
+  if(j.tool==="bao_gia") return (p.ten||p.mst||"")+" · "+(p.dich_vu||"");
+  if(j.tool==="hop_dong_web") return (p.mst||"")+" · "+(p.dich_vu||"");
+  if(j.tool==="phan_loai") return "Tháng "+String(p.thang||"").replace("T","");
+  if(j.tool==="tim_file") return p.trong?("Thư mục "+String(p.trong).split(/[\\\/]/).filter(Boolean).pop()):("“"+(p.q||"")+"”");
+  if(j.tool==="lay_file") return p.paths?(p.paths.length+" file"):String(p.path||"").split(/[\\\/]/).pop();
+  var bn=function(x){ return String(x||"").split(/[\\\/]/).filter(Boolean).pop()||""; };
+  if(j.tool==="doc_file"||j.tool==="sua_file") return bn(p.path);
+  if(j.tool==="copy_file") return (p.move?"Di chuyển ":"Copy ")+((p.srcs||[]).length||1)+" mục → "+bn(p.dst);
+  if(j.tool==="tao_thu_muc") return p.name||"";
+  if(j.tool==="nhan_file") return ((p.files||[]).length)+" file → "+bn(p.dst);
+  return "";
+}
+function timeOf(j){ var d=new Date(String(j.thoi_gian).replace(" ","T")); if(isNaN(d)) return ""; return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+" "+("0"+d.getDate()).slice(-2)+"/"+("0"+(d.getMonth()+1)).slice(-2); }
+function jobRows(list){
+  if(!list.length) return '<div class="empty">Chưa có lệnh nào</div>';
+  return list.map(function(j){
+    var t=toolById(j.tool)||{name:j.tool,icon:"chip"};
+    return '<div class="job" data-j="'+esc(j.id)+'"><span class="ji">'+svg(t.icon)+'</span><span class="jt"><b>'+esc(t.name)+'</b><span>'+esc(summary(j))+' · '+timeOf(j)+'</span></span><span class="tag '+esc(j.trang_thai)+'">'+esc(STATE_VN[j.trang_thai]||j.trang_thai)+'</span></div>';
+  }).join("");
+}
+var actOpen=false;
+function renderJobs(){
+  // Cập nhật hiệu ứng trên sơ đồ: vòng sáng khi tool đang chạy / chờ xác nhận
+  var busy={}, wait={}, n=0;
+  JOBS.forEach(function(j){
+    var tj=toolById(j.tool)||{}, hk=tj.parent||tj.glow||j.tool;  // Lấy file sáng ở nút Tìm file          // tool con (Phân loại, Trình ký) sáng ở nút Hợp đồng
+    if(["queued","running","confirmed"].indexOf(j.trang_thai)>=0){ busy[hk]=1; n++; }
+    else if(j.trang_thai==="await_confirm"){ wait[hk]=1; n++; }
+  });
+  TOOLS.forEach(function(t){
+    var nd=el("nd_"+t.id), sp=el("sp_"+t.id);
+    if(nd){ nd.classList.toggle("busy",!!busy[t.id]); nd.classList.toggle("wait",!!wait[t.id]); }
+    if(sp) sp.classList.toggle("act",!!(busy[t.id]||wait[t.id]));
+  });
+  ["cntTop","cntHub"].forEach(function(id){ var c=el(id); c.textContent=n; c.style.display=n?"grid":"none"; });
+  el("hub").title = !connected()?"Chế độ Demo":(Object.keys(wait).length?"Chờ xác nhận":(n?"Đang chạy":"Sẵn sàng"));
+  if(actOpen) renderActivity(false);
+}
+function openActivity(){ actOpen=true; renderActivity(true); }
+function renderActivity(first){
+  var h='<div class="sh-h"><span class="ic">'+svg("clock")+'</span><div><b>Hoạt động gần đây</b></div></div>'+jobRows(JOBS.slice(0,12))+'<button class="btn sec" id="btnCloseA">Đóng</button>';
+  if(first) openSheet(h); else el("sheet").innerHTML='<div class="grab"></div>'+h;
+  el("btnCloseA").onclick=closeSheet;
+}
+
+/* ---------- cửa sổ trượt ---------- */
+var openJobId=null;
+function openSheet(html){ var s=el("sheet"); s.innerHTML='<div class="grab"></div>'+html; el("back").style.display="block"; setTimeout(function(){s.classList.add("open");},10); }
+function closeSheet(){ clearInterval(supTimer); supTimer=null; openJobId=null; actOpen=false; el("sheet").classList.remove("open"); el("back").style.display="none"; }
+el("back").onclick=closeSheet;
+function toast(m){ var t=el("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(function(){t.style.display="none";},2800); }
+
+/* ---------- tra tên công ty theo MST ----------
+   1) Tab KHACH_HANG trong Google Sheet (nếu đã kết nối)  2) Tra cứu công khai theo dữ liệu Tổng cục Thuế (VietQR) */
+function lookupName(mst){
+  var own = connected() ? api("khach.lookup",{mst:mst}).then(function(r){ return r.ten||""; }).catch(function(){ return ""; }) : Promise.resolve("");
+  return own.then(function(n){
+    if(n) return n;
+    var ctl = window.AbortController ? new AbortController() : null;
+    var tm = setTimeout(function(){ if(ctl) ctl.abort(); }, 8000);
+    return fetch("https://api.vietqr.io/v2/business/"+mst, ctl?{signal:ctl.signal}:{})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ clearTimeout(tm); return (j && j.data && j.data.name) ? j.data.name : ""; })
+      .catch(function(){ clearTimeout(tm); return ""; });
+  });
+}
+
+/* ---------- form tool ---------- */
+function openSoon(t){
+  openSheet('<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">'+esc(t.sub)+'</p>'+
+    '<div class="note info">Công cụ này đang được nâng cấp để nối vào AI Control, sẽ có ở bản sau.</div><button class="btn sec" id="btnCloseS">Đóng</button>');
+  el("btnCloseS").onclick=closeSheet;
+}
+/* Menu chức năng con (vd. Hợp đồng gồm: Tạo hợp đồng, Phân loại HĐ, Trình ký) */
+function openGroup(t){
+  var kids=TOOLS.filter(function(c){return c.parent===t.id;});
+  var items=(t.group?[{t:t,title:"",sub:""}]:[{t:t,title:"Tạo hợp đồng",sub:t.sub}]).concat(kids.map(function(c){ return {t:c,title:c.name,sub:c.ready?c.sub:"Đang nâng cấp"}; }));
+  var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">Chọn việc cần làm</p>'+
+    items.map(function(it,i){ if(t.group && i===0) return ""; return '<button class="gm" data-g="'+i+'"><span class="ic">'+svg(it.t.icon)+'</span><span><b>'+esc(it.title)+'</b><small>'+esc(it.sub)+'</small></span><i>›</i></button>'; }).join("")+
+    '<button class="btn sec" id="btnCloseG">Đóng</button>';
+  openSheet(h);
+  el("btnCloseG").onclick=closeSheet;
+  document.querySelectorAll(".gm").forEach(function(b){ b.onclick=function(){ var i=+b.getAttribute("data-g"); if(i===0) openTool(t,{},[]); else openTool(items[i].t); }; });
+}
+function openTool(t, prefill, missing){
+  if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
+  if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
+  if(!t.ready){ openSoon(t); return; }
+  if(t.support){ openSupport(); return; }
+  if(!prefill && TOOLS.some(function(c){return c.parent===t.id;})){ openGroup(t); return; }
+  if(t.link){ toast("Đang mở “"+t.name+"”…"); var w=window.open(t.link,"_blank","noopener"); if(!w) location.href=t.link; return; }
+  var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">'+esc(t.desc)+'</p><form id="tf" autocomplete="off">';
+  t.fields.forEach(function(f){
+    var v=prefill&&prefill[f.k]!=null?prefill[f.k]:"";
+    h+='<div class="fld" data-k="'+f.k+'"'+(f.when?' data-wk="'+f.when[0]+'" data-wv="'+esc(f.when[1])+'"':'')+'><label>'+esc(f.label)+(f.req?' <i>*</i>':'')+'</label>';
+    if(f.type==="select"){ h+='<select name="'+f.k+'">'+f.opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(o[0])===String(v)?' selected':'')+'>'+esc(o[1])+'</option>';}).join("")+'</select>'; }
+    else h+='<input name="'+f.k+'" type="text"'+(f.mode?' inputmode="'+f.mode+'"':'')+' value="'+esc(v)+'">';
+    if(f.sub) h+='<div class="sub" '+(f.lookup?'':'')+'>'+esc(f.sub)+'</div>';
+    h+='</div>';
+  });
+  if(missing&&missing.length) h+='<div class="note">Còn thiếu: '+esc(missing.join(", "))+'. Anh bổ sung rồi gửi.</div>';
+  if(t.risk==="R2") h+='<div class="note">Việc này ghi lên hệ thống VNPT. Hệ thống sẽ dừng lại chờ anh xác nhận, anh tự bấm Lưu trên máy tính.</div>';
+  else if(t.id==="phan_loai") h+='<div class="note info">Chạy thử trước, chưa copy file. Anh xem kết quả rồi mới bấm “Chạy thật”.</div>';
+  h+='<button class="btn" type="submit" id="btnSend">Gửi lệnh</button><button class="btn sec" type="button" id="btnClose">Đóng</button></form>';
+  var mine=JOBS.filter(function(j){return j.tool===t.id;}).slice(0,5);
+  if(mine.length) h+='<h3 class="sec">Lệnh gần đây của công cụ này</h3>'+jobRows(mine);
+  openSheet(h);
+  var form=el("tf");
+  function applyWhen(){
+    [].forEach.call(form.querySelectorAll(".fld[data-wk]"),function(d){
+      var cur=form.elements[d.dataset.wk]; d.classList.toggle("hide", !cur || cur.value!==d.dataset.wv);
+    });
+  }
+  form.addEventListener("change",applyWhen); applyWhen();
+  // Tự điền "Tổng tiền" theo dịch vụ (anh vẫn sửa tay được). Chỉ chạy lại khi đổi dịch vụ/gói/hình thức.
+  if(t.price && form.elements.tong_tien){
+    var tongIn=form.elements.tong_tien, tongSub=form.querySelector('.fld[data-k="tong_tien"] .sub');
+    var subDefault=tongSub?tongSub.textContent:"";
+    var autoPrice=function(){
+      var vals={}; [].forEach.call(form.elements,function(e){ if(e.name) vals[e.name]=e.value; });
+      var pr=t.price(vals);
+      if(pr){ tongIn.value=fmtMoney(pr); if(tongSub) tongSub.textContent="Tự điền theo bảng giá (đã gồm 8% VAT"+(vals.nhom_dv!=="BHXH VAN"&&vals.loai!=="giaHan"?", gồm USB token":"")+"). Anh sửa lại được."; }
+      else { tongIn.value=""; if(tongSub) tongSub.textContent="Dịch vụ này chưa có bảng giá, anh nhập tay. "+subDefault; }
+    };
+    ["nhom_dv","van_goi","van_thang","loai"].forEach(function(k){ if(form.elements[k]) form.elements[k].addEventListener("change",autoPrice); });
+    if(!tongIn.value) autoPrice();
+  }
+  el("btnClose").onclick=closeSheet;
+  var mstIn=form.elements.mst, tenIn=form.elements.ten;
+  if(mstIn && tenIn){
+    var lastQ="";
+    mstIn.addEventListener("input",function(){
+      var m=mstIn.value.replace(/\D/g,"");
+      if((m.length===10||m.length===13) && !tenIn.value && m!==lastQ){ lastQ=m; lookupName(m).then(function(n){ if(n && !tenIn.value){ tenIn.value=n; toast("Đã tra tên: "+n); } else if(!n){ toast("Không tra được tên, anh nhập tay"); } }); }
+    });
+  }
+  form.onsubmit=function(e){
+    e.preventDefault();
+    var p={}, miss=[];
+    t.fields.forEach(function(f){
+      var d=form.querySelector('.fld[data-k="'+f.k+'"]'); if(d.classList.contains("hide")) return;
+      var v=String(form.elements[f.k].value).trim();
+      if(f.k==="mst"||f.k==="tong_tien") v=v.replace(/[\s.,]/g,"");
+      if(f.req && !v) miss.push(f.label);
+      if(v!=="") p[f.k]=v;
+    });
+    if(p.mst && !/^(\d{10}(-?\d{3})?|\d{12}|\d{9})$/.test(p.mst)) miss.push("Mã số thuế (10, 12 hoặc 13 số)");
+    if(miss.length){ toast("Cần nhập: "+miss[0]); return; }
+    if(t.build) p=t.build(p);
+    el("btnSend").disabled=true; el("btnSend").textContent="Đang gửi…";
+    submitJob(t,p).then(function(r){
+      closeSheet(); toast(connected()?"Đã gửi lệnh, đang chờ máy tính nhận":"Đã ghi (chế độ Demo)");
+      if(connected() && r.id) setTimeout(function(){ openJob(r.id); },350);
+    }).catch(function(err){ el("btnSend").disabled=false; el("btnSend").textContent="Gửi lệnh"; toast("Lỗi: "+err.message); });
+  };
+}
+
+/* ---------- Tìm file: vẽ danh sách kết quả + nút Lấy file / Xem thư mục ---------- */
+var FILES_TAG="§FILES§", NOI_VN={d:"Ổ D",downloads:"Downloads",desktop:"Desktop"};
+function parseFiles(j){
+  var s=String(j.ket_qua||""); if(j.tool!=="tim_file" || s.indexOf(FILES_TAG)!==0) return null;
+  try{ return JSON.parse(s.slice(FILES_TAG.length)); }catch(e){ return null; }
+}
+function fileIcon(it){
+  if(it.d) return "folder";
+  var e=(String(it.n).split(".").pop()||"").toLowerCase();
+  if(e==="pdf") return "quote"; if(/^(doc|docx|rtf|odt)$/.test(e)) return "word"; if(/^(xls|xlsx|xlsm|csv)$/.test(e)) return "chart";
+  return "file";
+}
+function fmtSize(n){ n=+n||0; return n>=1048576?(n/1048576).toFixed(1)+" MB":Math.max(1,Math.round(n/1024))+" KB"; }
+function dirOf(p){ p=String(p); var i=Math.max(p.lastIndexOf("\\"),p.lastIndexOf("/")); return i>0?p.slice(0,i):p; }
+function fileListHtml(fl){
+  var head=fl.trong?"Trong thư mục: "+esc(fl.trong):"Tìm “"+esc(fl.q)+"”";
+  var h='<p class="sh-d">'+head+' · '+(+fl.n||0)+' kết quả'+(fl.n>fl.items.length?' (hiện '+fl.items.length+' khớp nhất)':'')+'</p>';
+  if(!fl.items.length) return h+'<div class="empty">Không thấy file nào. Thử từ khóa ngắn hơn, ví dụ chỉ tên riêng của khách.</div>';
+  h+=fl.items.map(function(it,i){
+    var big=!it.d && it.s>10*1048576;
+    var meta=(NOI_VN[it.r]||it.r)+" · "+(it.d?"Thư mục":fmtSize(it.s))+(it.t?" · "+it.t:"")+(big?" · quá 10 MB":"");
+    return '<button class="gm fr" data-i="'+i+'"'+(big?' data-big="1"':'')+'><span class="ic">'+svg(fileIcon(it))+'</span>'+
+      '<span style="min-width:0"><b style="word-break:break-word">'+esc(it.n)+'</b><small style="word-break:break-all">'+esc(dirOf(it.p))+'</small><small>'+esc(meta)+'</small></span><i>'+(it.d?"›":"⤓")+'</i></button>';
+  }).join("");
+  return h+'<div class="note info">Bấm vào file để lấy về điện thoại (tối đa 10 MB). Bấm vào thư mục để xem bên trong.</div>';
+}
+function bindFileList(j){
+  var fl=parseFiles(j); if(!fl) return;
+  Array.prototype.forEach.call(document.querySelectorAll(".fr"), function(b){
+    b.onclick=function(){
+      var it=fl.items[+b.getAttribute("data-i")]; if(!it) return;
+      if(b.getAttribute("data-big")){ toast("File lớn hơn 10 MB, anh mở trên máy tính"); return; }
+      var t=toolById(it.d?"tim_file":"lay_file"), p=it.d?{trong:it.p}:{path:it.p};
+      b.disabled=true;
+      submitJob(t,p).then(function(r){ toast(it.d?"Đang mở thư mục…":"Đang lấy file từ máy tính…"); if(r&&r.id) setTimeout(function(){ openJob(r.id); },300); })
+        .catch(function(e){ b.disabled=false; toast("Lỗi: "+e.message); });
+    };
+  });
+}
+
+/* ---------- chi tiết một việc ---------- */
+var FLOW = ["queued","running","await_confirm","done"];
+function openJob(id){ openJobId=id; renderJobSheet(true); }
+function renderJobSheet(first){
+  var j=JOBS.filter(function(x){return x.id===openJobId;})[0]; if(!j){ return; }
+  var t=toolById(j.tool)||{name:j.tool,icon:"chip"};
+  var st=j.trang_thai, idx=st==="confirmed"?2:FLOW.indexOf(st);
+  var bar='<div class="steps">'+FLOW.map(function(s,i){
+    var c = st==="error"?(i<=Math.max(idx,1)?"bad":""):(st==="done"?"fin":(i<=idx?"on":"")); return '<i class="'+c+'"></i>'; }).join("")+'</div>';
+  var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b><div class="sub">'+esc(summary(j))+'</div></div><span class="tag '+esc(st)+'" style="margin-left:auto">'+esc(STATE_VN[st]||st)+'</span></div>'+bar;
+  if(st==="queued") h+='<p class="sh-d">Đang chờ máy tính nhận lệnh'+(j.id.charAt(0)==="D"?"":". Máy tính cần đang bật và chạy chương trình nền.")+'</p>';
+  if(st==="running"||st==="confirmed") h+='<p class="sh-d">Máy tính đang xử lý, màn hình tự cập nhật.</p>';
+  var isKh = j.tool==="hop_dong_web" && st==="await_confirm" && String(j.ket_qua||"").indexOf("⏸KHDN")===0;
+  var fl=parseFiles(j);
+  if(j.cat_bot) h+='<div class="note info">Kết quả này dài, xem trong màn My Computer.</div><button class="btn" id="btnExOpen">Mở My Computer</button>';
+  else if(fl) h+=fileListHtml(fl);                       // Tìm file: danh sách bấm được thay cho khung chữ
+  else if(j.ket_qua) h+='<pre class="res">'+esc(String(j.ket_qua).replace(/^⏸KHDN\s*/,"⏸ "))+'</pre>';
+  if(j.link_file){
+    // File trên Drive: nút chính = TẢI THẲNG file (.docx/.pdf) về điện thoại; nút phụ = mở xem trên Drive.
+    var kind=(String(j.ket_qua||"").match(/\.(docx|pdf)\b/i)||[])[1]; kind=kind?kind.toLowerCase():"";
+    var kindTxt=kind==="docx"?"Tải file Word (.docx)":(kind==="pdf"?"Tải file PDF":"Tải file kết quả");
+    String(j.link_file).split(" ").filter(Boolean).forEach(function(u){
+      var m=u.match(/\/d\/([\w-]+)/)||u.match(/[?&]id=([\w-]+)/);
+      if(m) h+='<a class="btn" style="display:block;text-align:center;text-decoration:none" href="https://drive.google.com/uc?export=download&id='+esc(m[1])+'" rel="noopener">'+svg("download")+' '+kindTxt+'</a>';
+      if(m) h+='<button class="btn ok btnShare" data-fid="'+esc(m[1])+'" data-kind="'+kind+'">'+svg("share")+' Chia sẻ qua Zalo</button>';
+      h+='<a class="link" href="'+esc(u)+'" target="_blank" rel="noopener">'+svg("link")+' Mở xem trên Drive</a>';
+    });
+  }
+  if(st==="await_confirm"){
+    var txt = j.tool==="phan_loai"?"Chạy thật (copy file)":"Xác nhận, tiếp tục";
+    if(j.tool==="hop_dong_web") { if(isKh){ h+='<div class="note">Khách hàng chưa có trong hệ thống. Máy tính đã điền sẵn form tạo khách hàng. Bấm nút bên dưới để máy tính TỰ bấm “Lưu”; lưu xong máy sẽ tự tạo hợp đồng và báo lại ở đây.</div>'; txt="Lưu khách hàng"; } else { h+='<div class="note">Hợp đồng đã được điền sẵn trên Chrome của máy tính. Bấm nút bên dưới để máy tính TỰ bấm “Hoàn thành” → “Lưu” trên hopdong.vnpt.vn.</div>'; txt="Xác nhận & Lưu hợp đồng"; } }
+    h+='<button class="btn ok" id="btnYes">'+txt+'</button><button class="btn danger" id="btnNo">Hủy việc này</button>';
+  }
+  // Lệnh lỗi/đã hủy: chạy lại ngay với đúng dữ liệu cũ, khỏi nhập lại từ đầu
+  // Lệnh treo quá 3 phút không có cập nhật (máy tắt/extension kẹt) cũng cho chạy lại
+  var stale=false; try{ var tt=new Date(String(j.cap_nhat||j.thoi_gian).replace(" ","T")).getTime(); stale=(st==="running"||st==="queued"||st==="confirmed") && tt && (Date.now()-tt>180000); }catch(e){}
+  if(stale) h+='<div class="note">Lệnh này đã hơn 3 phút chưa có cập nhật từ máy tính. Có thể máy đang kẹt hoặc đã tắt.</div>';
+  if((st==="error"||st==="cancelled"||stale) && j.params && typeof j.params==="object") h+='<button class="btn" id="btnRetry">Chạy lại</button>';
+  h+='<button class="btn sec" id="btnClose2">Đóng</button>';
+  var sh=el("sheet");
+  if(first || !el("btnClose2")){ openSheet(h); } else { sh.innerHTML='<div class="grab"></div>'+h; }
+  el("btnClose2").onclick=closeSheet;
+  bindFileList(j);
+  if(el("btnExOpen")) el("btnExOpen").onclick=function(){ var p=j.params||{}; openExplorer(p.trong?{path:p.trong}:(p.path?{path:dirOf(p.path)}:{})); };
+  // Chia sẻ file kết quả (Word/PDF) qua Zalo: lấy file từ backend rồi mở bảng chia sẻ của điện thoại
+  Array.prototype.forEach.call(document.querySelectorAll(".btnShare"), function(b){
+    var cache=null, label=b.innerHTML;
+    b.onclick=function(){
+      function doShare(){
+        var f=cache.file;
+        if(navigator.canShare && navigator.canShare({files:[f]})){
+          return navigator.share({files:[f], title:f.name}).then(function(){ b.innerHTML=label; })
+            .catch(function(e){
+              if(e && e.name==="AbortError"){ b.innerHTML=label; return; }          // người dùng đóng bảng chia sẻ
+              if(e && e.name==="NotAllowedError"){ b.innerHTML="Bấm lần nữa để chia sẻ"; return; } // hết "lượt bấm" sau khi tải
+              throw e;
+            });
+        }
+        // Trình duyệt không hỗ trợ chia sẻ file: tải về để gửi tay
+        var a=document.createElement("a"); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove();
+        toast("Máy không hỗ trợ chia sẻ trực tiếp, đã tải file về."); b.innerHTML=label; return Promise.resolve();
+      }
+      if(cache){ doShare().catch(function(e){ toast("Lỗi: "+e.message); b.innerHTML=label; }); return; }
+      b.disabled=true; b.textContent="Đang chuẩn bị file…";
+      api("file.get",{file_id:b.getAttribute("data-fid")}).then(function(r){
+        var bin=atob(r.b64), arr=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+        cache={file:new File([arr], r.name, {type:r.mime})};
+        b.disabled=false; return doShare();
+      }).catch(function(e){
+        b.disabled=false; b.innerHTML=label;
+        toast(/Action không hợp lệ/.test(e.message)?"Cần cập nhật Apps Script (thêm file.get)":"Lỗi: "+e.message);
+      });
+    };
+  });
+  if(el("btnRetry")) el("btnRetry").onclick=function(){
+    var b=el("btnRetry"); b.disabled=true; b.textContent="Đang gửi lại…";
+    submitJob(t, JSON.parse(JSON.stringify(j.params))).then(function(r){ toast("Đã gửi lại lệnh"); if(r&&r.id) setTimeout(function(){ openJob(r.id); },300); })
+      .catch(function(e){ b.disabled=false; b.textContent="Chạy lại"; toast("Lỗi: "+e.message); });
+  };
+  if(el("btnYes")) el("btnYes").onclick=function(){ answer(j.id,true); };
+  if(el("btnNo")) el("btnNo").onclick=function(){ answer(j.id,false); };
+}
+var ansBusy=false;
+function answer(id, ok){
+  if(!connected() || ansBusy) return;
+  ansBusy=true; setTimeout(function(){ ansBusy=false; }, 4000); // chống bấm 2 lần
+  api("job.confirm",{id:id, ok:ok}).then(function(){ toast(ok?"Đã xác nhận":"Đã hủy"); refreshJobs(); }).catch(function(e){ toast("Lỗi: "+e.message); });
+}
+
+/* ---------- cài đặt kết nối ---------- */
+function openSettings(){
+  var h='<div class="sh-h"><span class="ic">'+svg("gear")+'</span><div><b>Kết nối</b></div></div>'+
+   '<p class="sh-d">Nối ứng dụng này với Google Sheet của anh (nơi lưu danh sách lệnh). Chỉ cần làm một lần trên mỗi điện thoại.</p>'+
+   '<form id="sf" autocomplete="off"><label>Địa chỉ backend (Apps Script)</label><input name="u" type="url" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(CFG.url)+'">'+
+   '<label>Mã bảo mật (TOKEN)</label><input name="t" type="password" placeholder="Mã đã tạo khi cài backend" value="'+esc(CFG.token)+'">'+
+   '<div class="note info">Mã chỉ lưu trên điện thoại này. Để trống cả hai ô để chạy chế độ Demo.</div>'+
+   '<div id="testRes"></div>'+
+   '<button class="btn" type="submit">Lưu và kiểm tra</button><button class="btn sec" type="button" id="btnResetLay">Đặt lại vị trí các biểu tượng</button><button class="btn sec" type="button" id="btnClose3">Đóng</button></form>';
+  openSheet(h);
+  el("btnClose3").onclick=closeSheet;
+  el("btnResetLay").onclick=function(){ try{ localStorage.removeItem("aic_lay"); }catch(e){} renderHub(); renderJobs(); closeSheet(); toast("Đã đặt lại sơ đồ"); };
+  el("sf").onsubmit=function(e){
+    e.preventDefault(); var f=e.target;
+    saveCfg(f.u.value, f.t.value);
+    el("testRes").innerHTML='<div class="note info">Đang kiểm tra…</div>';
+    pingNow().then(function(ok){
+      el("testRes").innerHTML = ok ? '<div class="note info">Kết nối thành công.</div>' : (connected()?'<div class="note err">Không kết nối được. Kiểm tra lại địa chỉ và mã.</div>':'<div class="note info">Đang ở chế độ Demo.</div>');
+      refreshJobs();
+    });
+  };
+}
+
+/* ---------- trạng thái kết nối trên đầu trang ---------- */
+function setChip(d,t,state,text){ el(d).className="dot "+state; el(t).textContent=text; }
+function ago(s){ return s<90?"vừa xong":(Math.round(s/60)+" phút trước"); }
+function pingNow(){
+  if(!connected()){ setChip("dBack","tBack","warn","Chế độ Demo"); setChip("dAgent","tAgent","","Máy tính"); setChip("dExt","tExt","","Chrome"); return Promise.resolve(false); }
+  return api("ping").then(function(r){
+    setChip("dBack","tBack","on","Đã kết nối");
+    var a=r.nguoi_thuc_thi.agent, x=r.nguoi_thuc_thi.ext;
+    setChip("dAgent","tAgent",a&&a.giay_truoc<60?"on":"warn",a&&a.giay_truoc<60?"Máy tính":"Máy tính: "+(a?ago(a.giay_truoc):"chưa chạy"));
+    setChip("dExt","tExt",x&&x.giay_truoc<150?"on":"warn",x&&x.giay_truoc<150?"Chrome":"Chrome: "+(x?ago(x.giay_truoc):"chưa chạy"));
+    return true;
+  }).catch(function(){ setChip("dBack","tBack","warn","Mất kết nối"); return false; });
+}
+
+/* ---------- ô lệnh tự do + giọng nói ---------- */
+el("cmdForm").onsubmit=function(e){
+  e.preventDefault();
+  var v=el("cmdInput").value.trim(); if(!v) return;
+  if(!connected()){ toast("Cần kết nối backend (Cài đặt) để dịch lệnh"); return; }
+  el("cmdHint").textContent="Đang dịch lệnh…";
+  api("ai.parse",{text:v}).then(function(r){
+    var p=r.parsed||{}, t=toolById(p.tool);
+    el("cmdHint").textContent="Chạm để mở · kéo để xoay vòng · giữ rồi kéo để đổi chỗ";
+    if(!t){ toast("Chưa hiểu lệnh, anh chọn công cụ bên dưới"); return; }
+    var pre=Object.assign({},p.params||{});
+    if(t.id==="hop_dong_web" && pre.dich_vu){ var m=String(pre.dich_vu).match(/^BHXH VAN (\S+) - (\d+) tháng$/); if(m){ pre.nhom_dv="BHXH VAN"; pre.van_goi=m[1]; pre.van_thang=m[2]; } else pre.nhom_dv=pre.dich_vu; }
+    el("cmdInput").value=""; toggleCmd(false); openTool(t, pre, p.thieu||[]);
+  }).catch(function(err){ el("cmdHint").textContent="Không dịch được: "+err.message; });
+};
+(function(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, b=el("btnMic");
+  if(!SR){ b.classList.add("hide"); return; }
+  var rec=null;
+  b.onclick=function(){
+    if(rec){ rec.stop(); return; }
+    rec=new SR(); rec.lang="vi-VN"; rec.interimResults=false;
+    b.classList.add("rec");
+    rec.onresult=function(ev){ el("cmdInput").value=ev.results[0][0].transcript; };
+    rec.onend=function(){ b.classList.remove("rec"); rec=null; if(el("cmdInput").value) el("cmdForm").requestSubmit(); };
+    rec.onerror=function(){ b.classList.remove("rec"); rec=null; toast("Không nghe được, thử lại"); };
+    try{ rec.start(); }catch(e){ b.classList.remove("rec"); rec=null; }
+  };
+})();
+
+/* ---------- cài lên màn hình chính (PWA) ---------- */
+var deferred=null;
+window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); deferred=e; showInstall(); });
+function isStandalone(){ return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone; }
+function showInstall(){ if(!isStandalone()) el("installBox").style.display="grid"; }
+el("installBox").onclick=function(){
+  if(deferred){ deferred.prompt(); deferred.userChoice.then(function(){ deferred=null; el("installBox").style.display="none"; }); }
+  else openSheet('<div class="sh-h"><span class="ic">'+svg("phone")+'</span><div><b>Cài ứng dụng</b></div></div><p class="sh-d">Trên Chrome Android: bấm dấu ⋮ ở góc phải trên, chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”.</p><button class="btn sec" id="btnClose4">Đóng</button>');
+  if(el("btnClose4")) el("btnClose4").onclick=closeSheet;
+};
+window.addEventListener("appinstalled",function(){ el("installBox").style.display="none"; });
+setTimeout(function(){ if(!deferred) showInstall(); },1500);
+
+
+/* =====================================================================
+   HỖ TRỢ KHÁCH HÀNG: gửi tool (zip) cho khách → khách chạy → ID hiện ở đây → bấm Kết nối (mở RustDesk)
+   Backend: ho_tro.list / ho_tro.mark (cần TOKEN). Khách báo ID bằng khóa riêng (ho_tro.report).
+   ===================================================================== */
+var SUP_ZIP="ho-tro/VNPT-HoTro.zip", supTimer=null;
+function supZipUrl(){ return new URL(SUP_ZIP, location.href).href; }
+function supMsg(){ return "VNPT Chơn Thành – hỗ trợ từ xa miễn phí.\nCách làm: tải file zip, giải nén, bấm đúp VNPT-HoTro.bat, khi có thông báo bấm “Chấp nhận”.\nHotline 0918 203 603"; }
+/* Tải sẵn file zip khi mở màn Hỗ trợ: Android chỉ cho mở bảng chia sẻ NGAY trong lúc chạm nút (không được chờ tải xong mới gọi). */
+var supFile=null;
+function supPrefetch(){
+  supFile=null;
+  fetch(supZipUrl(),{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error("http"); return r.blob(); })
+    .then(function(b){ supFile=new File([b],"VNPT-HoTro.zip",{type:"application/zip"}); }).catch(function(){});
+}
+/* Bấm nút: mở bảng chia sẻ (chọn Zalo). Gửi đúng file zip nếu máy cho phép, không thì gửi link tải. */
+function shareTool(){
+  var url=supZipUrl(), msg=supMsg(), data;
+  if(supFile && navigator.canShare && navigator.canShare({files:[supFile]})) data={files:[supFile], title:"VNPT Hỗ trợ từ xa", text:msg};
+  else data={title:"VNPT Hỗ trợ từ xa", text:msg+"\n"+url};
+  if(!navigator.share){ copyText(msg+"\n"+url).then(function(){ toast("Đã sao chép nội dung, dán vào Zalo"); }).catch(function(){ toast("Máy không hỗ trợ chia sẻ, dùng link tải bên dưới"); }); return; }
+  navigator.share(data).catch(function(e){
+    if(e && e.name==="AbortError") return;                       // anh tự đóng bảng chia sẻ
+    copyText(msg+"\n"+url).then(function(){ toast("Không mở được bảng chia sẻ. Đã sao chép nội dung, dán vào Zalo"); })
+      .catch(function(){ toast("Không chia sẻ được: "+(e&&e.message||e)); });
+  });
+}
+function copyText(t){
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t); }catch(e){}
+  return Promise.reject(new Error("no clipboard"));
+}
+/* Bấm Kết nối: chép ID, rồi mở app RustDesk có sẵn ID (cần đã cài RustDesk). */
+function supConnect(id){
+  copyText(id).catch(function(){});
+  toast("Đang mở RustDesk (ID "+id+")… chờ khách bấm Chấp nhận");
+  location.href="rustdesk://connection/new/"+id;
+}
+function fmtT(v){ var d=new Date(v); if(isNaN(d)) return String(v||"").slice(0,16); function z(n){ return ("0"+n).slice(-2); } return z(d.getDate())+"/"+z(d.getMonth()+1)+" "+z(d.getHours())+":"+z(d.getMinutes()); }
+function supRender(items){
+  var box=el("supList"); if(!box) return;
+  if(!items||!items.length){ box.innerHTML='<p class="sub">Chưa có khách nào chạy tool. Gửi tool cho khách ở bước 1.</p>'; return; }
+  box.innerHTML=items.map(function(it){
+    var ts=fmtT(it.thoi_gian);
+    return '<div class="ht-it"><div><div class="id">'+esc(it.id)+'</div><div class="mt">'+esc(it.may||"")+(it.user?" · "+esc(it.user):"")+" · "+esc(ts)+'</div></div>'+
+      '<button class="b1" data-c="'+esc(it.id)+'">Kết nối</button><button class="b2" data-d="'+esc(it.id)+'" aria-label="Xong">✓</button></div>';
+  }).join("");
+}
+function supLoad(){
+  if(!connected()) return;
+  api("ho_tro.list",{}).then(function(r){ supRender(r.items||[]); }).catch(function(e){
+    var b=el("supList"); if(b) b.innerHTML='<div class="note err">Chưa lấy được danh sách: '+esc(e.message)+'. Nếu vừa cập nhật, cần dán Code.gs mới và triển khai lại.</div>';
+  });
+}
+function openSupport(){
+  var h='<div class="sh-h"><span class="ic">'+svg("headset")+'</span><div><b>Hỗ trợ khách hàng</b></div></div>'+
+    '<p class="sh-d">Miễn phí · khách bấm “Chấp nhận” mới kết nối được.</p>'+
+    '<div class="ht-card"><h4>1. Gửi tool cho khách</h4><p class="sub" style="margin:0 0 8px">Chọn Zalo ở bảng chia sẻ. Khách giải nén rồi bấm đúp VNPT-HoTro.bat.</p>'+
+    '<button class="btn" id="btnShareTool" style="margin-top:6px">Gửi file zip qua Zalo</button>'+
+    '<a class="sub" id="lnkZip" href="'+esc(SUP_ZIP)+'" download style="display:block;text-align:center;margin-top:10px;color:var(--blue-2)">Hoặc tải file zip về máy này</a></div>'+
+    '<div class="ht-card"><h4>2. Khách đã chạy tool</h4><div id="supList"><p class="sub">'+(connected()?'Đang tải…':'Chưa kết nối backend nên chưa nhận được ID. Vào Cài đặt để kết nối.')+'</p></div>'+
+    '<button class="btn sec" id="btnRd">Mở RustDesk</button></div>'+
+    '<div class="note info">Điện thoại cần cài sẵn ứng dụng RustDesk (CH Play). Nút Kết nối sẽ chép ID và mở RustDesk đã điền ID.</div>'+
+    '<button class="btn sec" id="btnCloseHt">Đóng</button>';
+  openSheet(h);
+  el("btnShareTool").onclick=shareTool;
+  el("btnRd").onclick=function(){ location.href="rustdesk://"; };
+  el("btnCloseHt").onclick=closeSheet;
+  el("supList").onclick=function(e){
+    var c=e.target.closest("[data-c]"), d=e.target.closest("[data-d]");
+    if(c) supConnect(c.getAttribute("data-c"));
+    else if(d){ api("ho_tro.mark",{id:d.getAttribute("data-d"),trang_thai:"xong"}).then(supLoad).catch(function(er){ toast(er.message); }); }
+  };
+  supPrefetch(); clearInterval(supTimer); supLoad(); if(connected()) supTimer=setInterval(supLoad,5000);
+}
+
+/* ---------- thanh nhập lệnh: ẩn mặc định, bấm nút AI Control để hiện ---------- */
+function toggleCmd(force){
+  var d=document.querySelector(".dock"), open=(typeof force==="boolean")?force:!d.classList.contains("open");
+  d.classList.toggle("open",open);
+  if(open){ setTimeout(function(){ try{ el("cmdInput").focus(); }catch(e){} },60); } else { try{ el("cmdInput").blur(); }catch(e){} }
+}
+document.addEventListener("keydown",function(e){ if(e.key==="Escape") toggleCmd(false); });
+
+/* ---------- sự kiện chung ---------- */
+document.addEventListener("click",function(e){
+  if(Date.now()<suppressUntil) return;
+  var t=e.target.closest("[data-t]"); if(t){ openTool(toolById(t.dataset.t)); return; }
+  var j=e.target.closest("[data-j]"); if(j){ openJob(j.dataset.j); }
+});
+el("btnSet").onclick=openSettings; el("btnAct").onclick=openActivity; el("hub").onclick=toggleCmd;
+
+/* ---------- khởi động ---------- */
+el("logo").innerHTML=svg("spark"); el("btnSet").innerHTML=svg("gear"); el("btnAct").insertAdjacentHTML("afterbegin",svg("clock")); el("btnMic").innerHTML=svg("mic"); el("btnGo").innerHTML=svg("send"); el("installBox").innerHTML=svg("download");
+loadCfg();
+if(importCfgFromHash()) setTimeout(function(){ toast("Đã nạp cấu hình kết nối"); },400);
+renderHub(); JOBS=connected()?[]:loadLocalJobs(); renderJobs(); pingNow(); refreshJobs();
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+// Tự cập nhật: 4 giây/lần khi có việc đang chạy, 20 giây/lần khi rảnh; dừng khi ẩn tab
+var tick=0;
+setInterval(function(){ if(document.hidden||!connected()) return; tick++; if(hasActive()||tick%5===0) refreshJobs(); },4000);
+setInterval(function(){ if(!document.hidden) pingNow(); },20000);
+document.addEventListener("visibilitychange",function(){ if(!document.hidden){ pingNow(); refreshJobs(); } });
+</script>
+<script src="explorer.js"></script>
+</body>
+</html>

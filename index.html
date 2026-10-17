@@ -579,11 +579,41 @@ function openLinks(t){
   openSheet(h); el("btnCloseL").onclick=closeSheet;
   document.querySelectorAll('.gm[data-act="khach"]').forEach(function(b){ b.onclick=function(){ if(typeof openKhach==="function") openKhach(); else toast("Chưa tải được sheets.js, hãy tải lại trang"); }; });   // Bảng KH
 }
+/* ---------- vnEdu Serial: chọn tài khoản admin trường đã lưu (chỉ lưu TÊN tài khoản, KHÔNG lưu mật khẩu) ---------- */
+function vnAccs(){ try{ var a=JSON.parse(lsGet("aic_vnedu_acc")||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function vnSave(a){ lsSet("aic_vnedu_acc", JSON.stringify(a)); }
+function openVnedu(t){
+  var acc=vnAccs();
+  var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div>'+
+    '<p class="sh-d">Chọn trường cần cập nhật serial. Máy tính sẽ mở trang đăng nhập vnEdu, điền sẵn tên tài khoản; anh chỉ nhập mật khẩu (hoặc để Chrome tự điền).</p>';
+  if(acc.length){
+    h+=acc.map(function(a,i){ return '<div style="display:flex;gap:8px;margin-bottom:8px"><button class="gm" data-v="'+i+'" style="flex:1"><span class="ic">'+svg("users")+'</span><span><b>'+esc(a.truong)+'</b><small>'+esc(a.tk)+'</small></span><i>›</i></button>'+
+      '<button class="btn danger" data-del="'+i+'" style="width:auto;padding:0 14px" aria-label="Xóa">✕</button></div>'; }).join("");
+  } else h+='<div class="note info">Chưa có trường nào được lưu. Thêm ở bên dưới.</div>';
+  h+='<h3 class="sec">Thêm trường</h3>'+
+    '<div class="fld"><label>Tên trường</label><input id="vnTr" type="text" placeholder="VD: THPT Chơn Thành"></div>'+
+    '<div class="fld"><label>Tên tài khoản admin</label><input id="vnTk" type="text" autocapitalize="off" autocomplete="off" placeholder="VD: chonthanh.ct"><div class="sub">Chỉ lưu tên tài khoản trên điện thoại này. Mật khẩu không lưu ở đây.</div></div>'+
+    '<button class="btn sec" id="vnAdd">Lưu trường này</button>'+
+    '<button class="btn sec" id="vnOpen">Dùng phiên vnEdu đang mở sẵn trên máy tính</button>'+
+    '<button class="btn sec" id="vnClose">Đóng</button>';
+  openSheet(h);
+  function send(p){ submitJob(t,p).then(function(r){ closeSheet(); toast(connected()?"Đã gửi lệnh, đang chờ máy tính nhận":"Đã ghi (chế độ Demo)"); if(connected()&&r.id) setTimeout(function(){ openJob(r.id); },350); }).catch(function(e){ toast("Lỗi: "+e.message); }); }
+  [].forEach.call(document.querySelectorAll("[data-v]"),function(b){ b.onclick=function(){ var a=acc[+b.getAttribute("data-v")]; send({tk:a.tk, truong:a.truong}); }; });
+  [].forEach.call(document.querySelectorAll("[data-del]"),function(b){ b.onclick=function(){ var i=+b.getAttribute("data-del"); if(!confirm("Xóa “"+acc[i].truong+"” khỏi danh sách?")) return; acc.splice(i,1); vnSave(acc); openVnedu(t); }; });
+  el("vnAdd").onclick=function(){
+    var tr=el("vnTr").value.trim(), tk=el("vnTk").value.trim();
+    if(!tr||!tk){ toast("Nhập đủ tên trường và tên tài khoản"); return; }
+    acc.push({truong:tr, tk:tk}); vnSave(acc); openVnedu(t); toast("Đã lưu “"+tr+"”");
+  };
+  el("vnOpen").onclick=function(){ send({}); };
+  el("vnClose").onclick=closeSheet;
+}
 function openTool(t, prefill, missing){
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
   if(!t.ready){ openSoon(t); return; }
+  if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
   if(t.support){ openSupport(); return; }
   if(!prefill && TOOLS.some(function(c){return c.parent===t.id;})){ openGroup(t); return; }
   if(t.link){ toast("Đang mở “"+t.name+"”…"); var w=window.open(t.link,"_blank","noopener"); if(!w) location.href=t.link; return; }

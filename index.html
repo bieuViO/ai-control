@@ -307,6 +307,7 @@ var TOOLS = [
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
   {id:"my_google", short:"My Google", name:"My Google", sub:"Mở nhanh Drive, Gmail, Lịch, Sheet, Docs, Meet", icon:"globe", ready:true, ring:"out", risk:"R0",
    links:[
+    {t:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app", icon:"users", act:"khach"},   /* mở sheets.js, không rời app */
     {t:"Google Drive", sub:"File và thư mục", icon:"folder", u:"https://drive.google.com/"},
     {t:"Thư mục AI_CONTROL_OUT", sub:"File báo giá, kết quả công cụ", icon:"folder", u:"https://drive.google.com/drive/folders/1gV-i5qlrXQmrRYq1Wqv0LXCTKwrU0VVK"},
     {t:"Gmail", sub:"Hộp thư", icon:"mail", u:"https://mail.google.com/"},
@@ -315,9 +316,7 @@ var TOOLS = [
     {t:"Google Trang tính", sub:"Bảng tính", icon:"chart", u:"https://docs.google.com/spreadsheets/"},
     {t:"Google Docs", sub:"Văn bản", icon:"file", u:"https://docs.google.com/document/"},
     {t:"Google Meet", sub:"Họp trực tuyến", icon:"video", u:"https://meet.google.com/"}
-   ]},
-  /* Bảng KH: xem/thêm/sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app (sheets.js). Thêm Sheet khác: sửa SHEET_FILES trong Code.gs. */
-  {id:"bang_kh", khach:true, short:"Bảng KH", name:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025", icon:"users", ready:true, ring:"out", risk:"R1"}
+   ]}
 ];
 function toolById(id){ return TOOLS.filter(function(t){return t.id===id;})[0]; }
 
@@ -570,13 +569,14 @@ function openGroup(t){
 /* Danh sách lối tắt (My Google): mỗi dòng là liên kết mở tab mới */
 function openLinks(t){
   var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">Chọn dịch vụ cần mở</p>'+
-    t.links.map(function(l){ return '<a class="gm" style="text-decoration:none" href="'+esc(l.u)+'" target="_blank" rel="noopener"><span class="ic">'+svg(l.icon)+'</span><span><b>'+esc(l.t)+'</b><small>'+esc(l.sub||"")+'</small></span><i>›</i></a>'; }).join("")+
+    t.links.map(function(l,i){ var in_='<span class="ic">'+svg(l.icon)+'</span><span><b>'+esc(l.t)+'</b><small>'+esc(l.sub||"")+'</small></span><i>›</i>';
+      return l.act ? '<button type="button" class="gm" data-act="'+esc(l.act)+'">'+in_+'</button>' : '<a class="gm" style="text-decoration:none" href="'+esc(l.u)+'" target="_blank" rel="noopener">'+in_+'</a>'; }).join("")+
     '<button class="btn sec" id="btnCloseL">Đóng</button>';
   openSheet(h); el("btnCloseL").onclick=closeSheet;
+  document.querySelectorAll('.gm[data-act="khach"]').forEach(function(b){ b.onclick=function(){ if(typeof openKhach==="function") openKhach(); else toast("Chưa tải được sheets.js, hãy tải lại trang"); }; });   // Bảng KH
 }
 function openTool(t, prefill, missing){
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
-  if(t.khach && typeof openKhach==="function"){ openKhach(); return; }   // Bảng KH (sheets.js)
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
   if(!t.ready){ openSoon(t); return; }

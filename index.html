@@ -315,7 +315,9 @@ var TOOLS = [
     {t:"Google Trang tính", sub:"Bảng tính", icon:"chart", u:"https://docs.google.com/spreadsheets/"},
     {t:"Google Docs", sub:"Văn bản", icon:"file", u:"https://docs.google.com/document/"},
     {t:"Google Meet", sub:"Họp trực tuyến", icon:"video", u:"https://meet.google.com/"}
-   ]}
+   ]},
+  /* Bảng KH: xem/thêm/sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app (sheets.js). Thêm Sheet khác: sửa SHEET_FILES trong Code.gs. */
+  {id:"bang_kh", khach:true, short:"Bảng KH", name:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025", icon:"users", ready:true, ring:"out", risk:"R1"}
 ];
 function toolById(id){ return TOOLS.filter(function(t){return t.id===id;})[0]; }
 
@@ -574,6 +576,7 @@ function openLinks(t){
 }
 function openTool(t, prefill, missing){
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
+  if(t.khach && typeof openKhach==="function"){ openKhach(); return; }   // Bảng KH (sheets.js)
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
   if(!t.ready){ openSoon(t); return; }
@@ -965,5 +968,6 @@ setInterval(function(){ if(!document.hidden) pingNow(); },20000);
 document.addEventListener("visibilitychange",function(){ if(!document.hidden){ pingNow(); refreshJobs(); } });
 </script>
 <script src="explorer.js"></script>
+<script src="sheets.js"></script>
 </body>
 </html>

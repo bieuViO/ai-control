@@ -387,13 +387,15 @@ function el(id){ return document.getElementById(id); }
    Thêm tool mới ở mảng TOOLS, sơ đồ tự xếp lại vị trí. */
 function polar(r,deg){ var a=deg*Math.PI/180; return [50+r*Math.cos(a), 50+r*Math.sin(a)]; }
 /* Bố cục sơ đồ do người dùng sắp xếp (xoay vòng / đổi chỗ), lưu trong localStorage "aic_lay". */
+var INNER_FIX=["bao_gia","hop_dong_web","cong_no","tim_file","vnedu_admin"];   // 5 nút vòng trong, không thêm bớt
 var RING={ "in":{r:25,d:15.5,start:-90,key:"rIn"}, "out":{r:42,d:15.5,start:-67.5,key:"rOut"} };
 var LAY={"in":[],"out":[],rIn:0,rOut:0}, dragNode=null, suppressUntil=0, G=null;
 function loadLay(){
   var l=null; try{ l=JSON.parse(lsGet("aic_lay")||"null"); }catch(e){}
   l=l||{}; LAY={"in":l["in"]||[],"out":l.out||[],rIn:+l.rIn||0,rOut:+l.rOut||0};
-  var rd=TOOLS.filter(function(t){return t.ready && t.ring!=="out" && !t.parent && !t.hidden;}).map(function(t){return t.id;});
-  var sn=TOOLS.filter(function(t){return (!t.ready || t.ring==="out") && !t.parent && !t.hidden;}).map(function(t){return t.id;});
+  // Vòng trong CỐ ĐỊNH 5 nút (INNER_FIX). Mọi tool khác (kể cả tool mới) luôn nằm vòng ngoài.
+  var rd=TOOLS.filter(function(t){return INNER_FIX.indexOf(t.id)>=0 && !t.parent && !t.hidden;}).map(function(t){return t.id;});
+  var sn=TOOLS.filter(function(t){return INNER_FIX.indexOf(t.id)<0 && !t.parent && !t.hidden;}).map(function(t){return t.id;});
   // giữ thứ tự đã lưu, bỏ tool không còn, thêm tool mới vào cuối
   LAY["in"]=LAY["in"].filter(function(id){return rd.indexOf(id)>=0;}).concat(rd.filter(function(id){return LAY["in"].indexOf(id)<0;}));
   LAY.out=LAY.out.filter(function(id){return sn.indexOf(id)>=0;}).concat(sn.filter(function(id){return LAY.out.indexOf(id)<0;}));

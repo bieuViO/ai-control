@@ -767,7 +767,14 @@ function renderJobSheet(first){
   h+='<button class="btn sec" id="btnClose2">Đóng</button>';
   var sh=el("sheet");
   if(first || !el("btnClose2")){ openSheet(h); } else { sh.innerHTML='<div class="grab"></div>'+h; }
-  el("btnClose2").onclick=closeSheet;
+  // Bấm Đóng = DỪNG lệnh nếu lệnh đang treo (quá 3 phút không cập nhật) hoặc là vnEdu Serial đang chờ/chạy → không còn cảnh báo nữa.
+  el("btnClose2").onclick=function(){
+    var active=["queued","running","await_confirm","confirmed"].indexOf(st)>=0;
+    if(active && connected() && (stale || j.tool==="vnedu_serial")){
+      api("job.update",{id:j.id, trang_thai:"cancelled", ket_qua:"Đã dừng từ điện thoại"}).then(function(){ toast("Đã dừng lệnh"); refreshJobs(); }).catch(function(){});
+    }
+    closeSheet();
+  };
   bindFileList(j);
   if(el("btnExOpen")) el("btnExOpen").onclick=function(){ var p=j.params||{}; openExplorer(p.trong?{path:p.trong}:(p.path?{path:dirOf(p.path)}:{})); };
   // Chia sẻ file kết quả (Word/PDF) qua Zalo: lấy file từ backend rồi mở bảng chia sẻ của điện thoại

@@ -115,13 +115,15 @@ function khLoadTabs() {
     SH.tab = pick; khDrawTabs(); return khRead();
   });
 }
-function khRead() {
-  if (!SH.file || !SH.tab) return Promise.resolve();
-  var my = ++SH.seq, i = el("khInfo"); if (i) i.textContent = "Đang tải…";
-  return api("sheet.read", { file: SH.file, tab: SH.tab, q: SH.q, limit: 40 }).then(function (r) {
-    if (my !== SH.seq) return;
-    SH.data = r; SH.K = khKeys(r.header); khRenderList();
-  }).catch(function (e) { if (my === SH.seq) khErr(e); });
+function khRead(more) {
+if (!SH.file || !SH.tab) return Promise.resolve();
+var my = ++SH.seq, i = el("khInfo"); if (i) i.textContent = "Đang tải…";
+var off = (more && SH.data) ? SH.data.rows.length : 0;
+return api("sheet.read", { file: SH.file, tab: SH.tab, q: SH.q, limit: 40, offset: off, order: "asc" }).then(function (r) {
+if (my !== SH.seq) return;
+if (more && SH.data) { r.rows = SH.data.rows.concat(r.rows); }   // nối thêm, giữ thứ tự như Sheet
+SH.data = r; SH.K = khKeys(r.header); khRenderList();
+}).catch(function (e) { if (my === SH.seq) khErr(e); });
 }
 function khCard(r, i) {
   var K = SH.K, c = r.cells, g = function (k) { return K[k] >= 0 ? khFlat(c[K[k]]) : ""; };
@@ -140,9 +142,10 @@ function khRenderList() {
   var box = el("khList"), info = el("khInfo"); if (!box) return;
   var d = SH.data;
   if (!d) { box.innerHTML = ""; return; }
-  box.innerHTML = d.rows.length ? d.rows.map(khCard).join("") : '<div class="note info" style="margin-top:10px">Không có dòng nào' + (SH.q ? ' khớp “' + esc(SH.q) + '”' : '') + '.</div>';
-  if (info) info.textContent = "Hiện " + d.rows.length + " / " + d.total + " dòng" + (d.total > d.rows.length ? " (mới nhất trước)" : "") + " · bấm vào khách để sửa";
-  Array.prototype.forEach.call(box.querySelectorAll(".khcard"), function (b) { b.onclick = function () { khEdit(+b.getAttribute("data-i")); }; });
+  box.innerHTML = d.rows.length ? d.rows.map(khCard).join("") + (d.rows.length < d.total ? '<button type="button" class="btn sec" id="khMoreRows" style="margin-top:10px">Xem thêm (' + (d.total - d.rows.length) + ' dòng nữa)</button>' : "") : '<div class="note info" style="margin-top:10px">Không có dòng nào' + (SH.q ? ' khớp “' + esc(SH.q) + '”' : '') + '.</div>';
+  if (info) info.textContent = "Hiện " + d.rows.length + " / " + d.total + " dòng" + " · đúng thứ tự trong Sheet · bấm vào khách để sửa";
+  if (el("khMoreRows")) el("khMoreRows").onclick = function () { khRead(true); };
+Array.prototype.forEach.call(box.querySelectorAll(".khcard"), function (b) { b.onclick = function () { khEdit(+b.getAttribute("data-i")); }; });
 }
 
 /* ---------- sửa 1 dòng ---------- */

@@ -296,8 +296,10 @@ var TOOLS = [
   /* Chưa liên kết: sẽ nối với app công nợ ở bước sau (đổi ready:true và thêm cách chạy khi nối) */
   {id:"nhac_no", short:"Nhắc nợ", name:"Nhắc nợ khách hàng", sub:"Gửi nhắc nợ qua email/Zalo", icon:"bell", ready:false},
   {id:"onebss", short:"OneBSS", name:"OneBSS", sub:"Upload hồ sơ, gia hạn CA/SmartCA", icon:"upload", ready:false},
-  {id:"vnedu_admin", group:true, short:"Admin vnEdu", name:"Admin vnEdu", sub:"Công cụ quản trị vnEdu", icon:"users", ready:false},
-  {id:"vnedu_serial", parent:"vnedu_admin", short:"Serial vnEdu", name:"vnEdu – Serial", sub:"Cập nhật serial SmartCA giáo viên", icon:"users", ready:false},
+  {id:"vnedu_admin", group:true, short:"Admin vnEdu", name:"Admin vnEdu", sub:"Công cụ quản trị vnEdu", icon:"users", ready:true},
+  {id:"vnedu_serial", parent:"vnedu_admin", short:"Serial vnEdu", name:"vnEdu – Serial", sub:"Cập nhật serial SmartCA giáo viên", icon:"users", ready:true, risk:"R2",
+   desc:"Máy tính mở trang đăng nhập vnEdu. Anh nhập tài khoản admin trường cần làm, tool tự quét serial giáo viên rồi báo về đây. Chỉ ghi lên vnEdu sau khi anh bấm Xác nhận.",
+   fields:[]},
   {id:"vnedu_sync", parent:"vnedu_admin", short:"Sync vnEdu", name:"VNEDU Sync Analyzer", sub:"Phân tích lịch sử đồng bộ", icon:"chart", ready:false},
   {id:"hoadon_pdf", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
   {id:"invoice_kh", short:"DL khách", name:"Dữ liệu KH Invoice", sub:"Xuất email, tên, MST khách", icon:"users", ready:false},
@@ -595,7 +597,8 @@ function openTool(t, prefill, missing){
     h+='</div>';
   });
   if(missing&&missing.length) h+='<div class="note">Còn thiếu: '+esc(missing.join(", "))+'. Anh bổ sung rồi gửi.</div>';
-  if(t.risk==="R2") h+='<div class="note">Việc này ghi lên hệ thống VNPT. Hệ thống sẽ dừng lại chờ anh xác nhận, anh tự bấm Lưu trên máy tính.</div>';
+  if(t.id==="vnedu_serial") h+='<div class="note">Bước 1 chỉ QUÉT, chưa sửa gì. Anh xem danh sách giáo viên cần cập nhật rồi bấm Xác nhận trên điện thoại thì mới ghi lên vnEdu.</div>';
+  else if(t.risk==="R2") h+='<div class="note">Việc này ghi lên hệ thống VNPT. Hệ thống sẽ dừng lại chờ anh xác nhận, anh tự bấm Lưu trên máy tính.</div>';
   else if(t.id==="phan_loai") h+='<div class="note info">Chạy thử trước, chưa copy file. Anh xem kết quả rồi mới bấm “Chạy thật”.</div>';
   h+='<button class="btn" type="submit" id="btnSend">Gửi lệnh</button><button class="btn sec" type="button" id="btnClose">Đóng</button></form>';
   var mine=JOBS.filter(function(j){return j.tool===t.id;}).slice(0,5);

@@ -742,7 +742,9 @@ function renderJobSheet(first){
   if(st==="running"||st==="confirmed") h+='<p class="sh-d">Máy tính đang xử lý, màn hình tự cập nhật.</p>';
   var isKh = j.tool==="hop_dong_web" && st==="await_confirm" && String(j.ket_qua||"").indexOf("⏸KHDN")===0;
   var fl=parseFiles(j);
-  if(j.cat_bot) h+='<div class="note info">Kết quả này dài, xem trong màn My Computer.</div><button class="btn" id="btnExOpen">Mở My Computer</button>';
+  var isVnSel = j.tool==="vnedu_serial" && st==="await_confirm";
+  if(isVnSel) h+='<pre class="res" id="vnSum">'+esc(VN_DS["_s_"+j.id]||(j.cat_bot?"":String(j.ket_qua||"").split("§DS§")[0])||"Đang tải kết quả quét…")+'</pre><div id="vnList"></div>';
+  else if(j.cat_bot) h+='<div class="note info">Kết quả này dài, xem trong màn My Computer.</div><button class="btn" id="btnExOpen">Mở My Computer</button>';
   else if(fl) h+=fileListHtml(fl);                       // Tìm file: danh sách bấm được thay cho khung chữ
   else if(j.ket_qua) h+='<pre class="res">'+esc(String(j.ket_qua).replace(/^⏸KHDN\s*/,"⏸ "))+'</pre>';
   if(j.link_file){
@@ -759,7 +761,8 @@ function renderJobSheet(first){
   if(st==="await_confirm"){
     var txt = j.tool==="phan_loai"?"Chạy thật (copy file)":"Xác nhận, tiếp tục";
     if(j.tool==="hop_dong_web") { if(isKh){ h+='<div class="note">Khách hàng chưa có trong hệ thống. Máy tính đã điền sẵn form tạo khách hàng. Bấm nút bên dưới để máy tính TỰ bấm “Lưu”; lưu xong máy sẽ tự tạo hợp đồng và báo lại ở đây.</div>'; txt="Lưu khách hàng"; } else { h+='<div class="note">Hợp đồng đã được điền sẵn trên Chrome của máy tính. Bấm nút bên dưới để máy tính TỰ bấm “Hoàn thành” → “Lưu” trên hopdong.vnpt.vn.</div>'; txt="Xác nhận & Lưu hợp đồng"; } }
-    h+='<button class="btn ok" id="btnYes">'+txt+'</button><button class="btn danger" id="btnNo">Hủy việc này</button>';
+    if(j.tool==="vnedu_serial") h+='<button class="btn danger" id="btnNo">Hủy việc này</button>';
+    else h+='<button class="btn ok" id="btnYes">'+txt+'</button><button class="btn danger" id="btnNo">Hủy việc này</button>';
   }
   // Lệnh lỗi/đã hủy: chạy lại ngay với đúng dữ liệu cũ, khỏi nhập lại từ đầu
   // Lệnh treo quá 3 phút không có cập nhật (máy tắt/extension kẹt) cũng cho chạy lại
@@ -814,8 +817,63 @@ function renderJobSheet(first){
     submitJob(t, JSON.parse(JSON.stringify(j.params))).then(function(r){ toast("Đã gửi lại lệnh"); if(r&&r.id) setTimeout(function(){ openJob(r.id); },300); })
       .catch(function(e){ b.disabled=false; b.textContent="Chạy lại"; toast("Lỗi: "+e.message); });
   };
+  if(isVnSel) vnSelRender(j);
   if(el("btnYes")) el("btnYes").onclick=function(){ answer(j.id,true); };
   if(el("btnNo")) el("btnNo").onclick=function(){ answer(j.id,false); };
+}
+/* ---------- vnEdu Serial: bảng chọn TỪNG giáo viên cần cập nhật ----------
+   Danh sách lấy từ kết quả quét (dòng §DS§ do máy tính gửi). Mặc định KHÔNG tích ai.
+   Chỉ dòng "cần cập nhật" mới tích được. Bấm Cập nhật → ghi §CHON§[id…] rồi xác nhận;
+   máy tính chỉ ghi đúng những người này, không đụng giáo viên khác. */
+var VN_DS={}, VN_SEL={}, VN_Q="";
+function vnNorm(x){ return String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
+function vnSelRender(j){
+  var box=el("vnList"); if(!box) return;
+  var ds=VN_DS[j.id];
+  if(!ds){
+    var raw=String(j.ket_qua||""), k=raw.indexOf("§DS§");
+    if(k>=0 && !j.cat_bot){ try{ ds=VN_DS[j.id]=JSON.parse(raw.slice(k+4)); }catch(e){} }
+    if(!ds){
+      box.innerHTML='<div class="note info">Đang tải danh sách giáo viên…</div>';
+      if(!VN_DS["_ld_"+j.id]){ VN_DS["_ld_"+j.id]=1;
+        api("job.get",{id:j.id}).then(function(r){ var t=String(r.job.ket_qua||""), i=t.indexOf("§DS§"); VN_DS[j.id]=i>=0?JSON.parse(t.slice(i+4)):[]; VN_DS["_s_"+j.id]=i>=0?t.slice(0,i):t; if(el("vnSum")) el("vnSum").textContent=VN_DS["_s_"+j.id]; vnSelRender(j); })
+          .catch(function(e){ VN_DS["_ld_"+j.id]=0; box.innerHTML='<div class="note">Không tải được danh sách: '+esc(e.message)+'</div>'; });
+      }
+      return;
+    }
+  }
+  var sel=VN_SEL[j.id]||(VN_SEL[j.id]={});
+  var LBL={need:["Cần cập nhật","#c62828"],ok:["Đã dùng serial mới nhất","#2e7d32"],manual:["Có 2 serial cùng ngày, cần chọn tay trên máy","#e65100"],nocert:["Chưa có chứng thư hợp lệ","#777"],notk:["Chưa có tài khoản ký số","#777"]};
+  var q=vnNorm(VN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n).indexOf(q)>=0; });
+  var nNeed=ds.filter(function(x){return x.t==="need";}).length, nSel=Object.keys(sel).filter(function(k){return sel[k];}).length;
+  var h='<div class="fld" style="margin-top:8px"><input id="vnQ" type="text" placeholder="Tìm theo tên (gõ không dấu được)…" value="'+esc(VN_Q)+'"></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
+    '<span>Hiển thị '+shown.length+'/'+ds.length+' · cần cập nhật '+nNeed+'</span>'+
+    (nNeed?'<span><a href="#" id="vnAll" style="margin-right:10px">Chọn hết cần cập nhật</a><a href="#" id="vnNone">Bỏ chọn</a></span>':'')+'</div>'+
+    '<div style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px">';
+  h+=shown.map(function(x){
+    var lb=LBL[x.t]||[x.t,"#777"], can=x.t==="need", on=can&&sel[x.k];
+    var line2=x.t==="need"?('Serial: '+esc(x.c||"(trống)")+' → <b style="color:#1565c0">'+esc(x.m||"")+'</b>'+(x.h?' · đến '+esc(x.h):'')):
+      ('Serial: '+esc(x.c||"(trống)")+(x.h?' · HH: <b style="color:#2e7d32">'+esc(x.h)+'</b>':''));
+    return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #eef2f8;'+(can?'cursor:pointer':'opacity:.75')+'">'+
+      '<input type="checkbox" data-vk="'+esc(x.k)+'" '+(on?'checked ':'')+(can?'':'disabled ')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
+      '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br><span style="font-size:13px;color:#555">'+line2+'</span><br><span style="font-size:12.5px;color:'+lb[1]+'">'+esc(lb[0])+'</span></span></label>';
+  }).join("")||'<div class="note info" style="margin:10px">Không có giáo viên khớp.</div>';
+  h+='</div><button class="btn ok" id="vnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Cập nhật '+nSel+' giáo viên đã chọn':'Tích chọn giáo viên cần cập nhật')+'</button>';
+  box.innerHTML=h;
+  var qi=el("vnQ"); qi.oninput=function(){ VN_Q=qi.value; var p=qi.selectionStart; vnSelRender(j); var q2=el("vnQ"); q2.focus(); try{q2.setSelectionRange(p,p);}catch(e){} };
+  [].forEach.call(box.querySelectorAll("[data-vk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vk")]=c.checked; vnSelRender(j); }; });
+  if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=true; }); vnSelRender(j); };
+  if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); VN_SEL[j.id]={}; vnSelRender(j); };
+  el("vnGo").onclick=function(){
+    var keys=ds.filter(function(x){ return x.t==="need" && sel[x.k]; }), b=el("vnGo");
+    if(!keys.length){ toast("Chưa chọn giáo viên nào"); return; }
+    if(!confirm("Cập nhật serial cho "+keys.length+" giáo viên:\n- "+keys.map(function(x){return x.n;}).join("\n- ")+"\n\nGiáo viên khác KHÔNG bị thay đổi.")) return;
+    b.disabled=true; b.textContent="Đang gửi…";
+    api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" giáo viên: "+keys.map(function(x){return x.n;}).join(", ")+"\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
+      .then(function(){ answer(j.id,true); })
+      .catch(function(e){ b.disabled=false; b.textContent="Cập nhật "+keys.length+" giáo viên đã chọn"; toast("Lỗi: "+e.message); });
+  };
 }
 var ansBusy=false;
 function answer(id, ok){

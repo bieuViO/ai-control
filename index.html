@@ -307,6 +307,8 @@ var TOOLS = [
   {id:"ca_plugin", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},
   {id:"hd_word", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false},
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
+  /* My Tool: sẽ liên kết sau (đổi ready:true khi nối). Vòng ngoài hiện 9 nút, không vẽ đường nối, chấm xanh = đã kết nối. */
+  {id:"my_tool", short:"My Tool", name:"My Tool", sub:"Sắp liên kết", icon:"chip", ready:false},
   {id:"my_google", short:"My Google", name:"My Google", sub:"Mở nhanh Drive, Gmail, Lịch, Sheet, Docs, Meet", icon:"globe", ready:true, ring:"out", risk:"R0",
    links:[
     {t:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app", icon:"users", act:"khach"},   /* mở sheets.js, không rời app */
@@ -415,14 +417,14 @@ function placeAll(){
 function renderHub(){
   loadLay();
   var svgH='<defs><radialGradient id="gl"><stop offset="0" stop-color="#2D7BEA" stop-opacity=".18"/><stop offset="1" stop-color="#2D7BEA" stop-opacity="0"/></radialGradient></defs>'+
-    '<circle class="glow" cx="50" cy="50" r="48"/><circle class="orbit" cx="50" cy="50" r="25"/><circle class="orbit" cx="50" cy="50" r="42"/>';
+    '<circle class="glow" cx="50" cy="50" r="48"/><circle class="orbit" cx="50" cy="50" r="25"/>';
   var html="";
   ["in","out"].forEach(function(k,ri){
     var cfg=RING[k];
     LAY[k].forEach(function(id,i){
       var t=toolById(id); if(!t) return;
       var ready=!!t.ready;
-      if(ready) svgH+='<line class="spoke" id="sp_'+t.id+'" x1="50" y1="50" x2="50" y2="50"/>';
+      if(ready && k==="in") svgH+='<line class="spoke" id="sp_'+t.id+'" x1="50" y1="50" x2="50" y2="50"/>';
       html+='<button class="node '+(ready?"ready":"soon")+'" data-ring="'+k+'" data-t="'+t.id+'" id="nd_'+t.id+'" aria-label="'+esc(t.name)+'" style="width:'+cfg.d+'%;height:'+cfg.d+'%;animation-delay:'+(i*70+(ready?0:200))+'ms">'+
         '<i class="nb"></i><span class="ni">'+svg(t.icon)+'</span><span class="nl">'+esc(t.short||t.name)+'</span></button>';
     });

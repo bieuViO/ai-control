@@ -417,7 +417,7 @@ function placeAll(){
 function renderHub(){
   loadLay();
   var svgH='<defs><radialGradient id="gl"><stop offset="0" stop-color="#2D7BEA" stop-opacity=".18"/><stop offset="1" stop-color="#2D7BEA" stop-opacity="0"/></radialGradient></defs>'+
-    '<circle class="glow" cx="50" cy="50" r="48"/>';
+    '<circle class="glow" cx="50" cy="50" r="48"/><circle class="orbit" cx="50" cy="50" r="42"/>';
   var html="";
   ["in","out"].forEach(function(k,ri){
     var cfg=RING[k];

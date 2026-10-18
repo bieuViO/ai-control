@@ -843,7 +843,7 @@ function vnSelRender(j){
     }
   }
   var sel=VN_SEL[j.id]||(VN_SEL[j.id]={});
-  var LBL={need:["Cần cập nhật","#c62828"],ok:["Đã dùng serial mới nhất","#2e7d32"],manual:["Có 2 serial cùng ngày, cần chọn tay trên máy","#e65100"],nocert:["Chưa có chứng thư hợp lệ","#777"],notk:["Chưa có tài khoản ký số","#777"]};
+  var LBL={need:["Cần cập nhật","#c62828"],ok:["Đã dùng serial mới nhất","#2e7d32"],manual:["Có 2 serial cùng ngày, cần chọn tay trên máy","#e65100"],nocert:["Chưa có chứng thư hợp lệ","#777"],notk:["Chưa có tài khoản ký số","#777"],err:["Không đọc được serial (vnEdu không trả dữ liệu) — kiểm tra tay trên máy","#e65100"]};
   var q=vnNorm(VN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n).indexOf(q)>=0; });
   var nNeed=ds.filter(function(x){return x.t==="need";}).length, nSel=Object.keys(sel).filter(function(k){return sel[k];}).length;
   var h='<div class="fld" style="margin-top:8px"><input id="vnQ" type="text" placeholder="Tìm theo tên (gõ không dấu được)…" value="'+esc(VN_Q)+'"></div>'+

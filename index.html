@@ -825,7 +825,7 @@ function renderJobSheet(first){
    Danh sách lấy từ kết quả quét (dòng §DS§ do máy tính gửi). Mặc định KHÔNG tích ai.
    Chỉ dòng "cần cập nhật" mới tích được. Bấm Cập nhật → ghi §CHON§[id…] rồi xác nhận;
    máy tính chỉ ghi đúng những người này, không đụng giáo viên khác. */
-var VN_DS={}, VN_SEL={}, VN_Q="";
+var VN_DS={}, VN_SEL={}, VN_Q="", VN_SCROLL={}, VN_QF=false;
 function vnNorm(x){ return String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
 function vnSelRender(j){
   var box=el("vnList"); if(!box) return;
@@ -850,7 +850,7 @@ function vnSelRender(j){
     '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
     '<span>Hiển thị '+shown.length+'/'+ds.length+' · cần cập nhật '+nNeed+'</span>'+
     (nNeed?'<span><a href="#" id="vnAll" style="margin-right:10px">Chọn hết cần cập nhật</a><a href="#" id="vnNone">Bỏ chọn</a></span>':'')+'</div>'+
-    '<div style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px">';
+    '<div id="vnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
   h+=shown.map(function(x){
     var lb=LBL[x.t]||[x.t,"#777"], can=x.t==="need", on=can&&sel[x.k];
     var line2=x.t==="need"?('Serial: '+esc(x.c||"(trống)")+' → <b style="color:#1565c0">'+esc(x.m||"")+'</b>'+(x.h?' · đến '+esc(x.h):'')):
@@ -861,10 +861,20 @@ function vnSelRender(j){
   }).join("")||'<div class="note info" style="margin:10px">Không có giáo viên khớp.</div>';
   h+='</div><button class="btn ok" id="vnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Cập nhật '+nSel+' giáo viên đã chọn':'Tích chọn giáo viên cần cập nhật')+'</button>';
   box.innerHTML=h;
-  var qi=el("vnQ"); qi.oninput=function(){ VN_Q=qi.value; var p=qi.selectionStart; vnSelRender(j); var q2=el("vnQ"); q2.focus(); try{q2.setSelectionRange(p,p);}catch(e){} };
-  [].forEach.call(box.querySelectorAll("[data-vk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vk")]=c.checked; vnSelRender(j); }; });
-  if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=true; }); vnSelRender(j); };
-  if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); VN_SEL[j.id]={}; vnSelRender(j); };
+  // Giữ nguyên vị trí cuộn khi app tự làm mới hoặc khi tích chọn (trước đây bị nhảy về đầu danh sách)
+  var sc=el("vnScroll"); sc.scrollTop=VN_SCROLL[j.id]||0; sc.onscroll=function(){ VN_SCROLL[j.id]=sc.scrollTop; };
+  var qi=el("vnQ");
+  if(VN_QF){ qi.focus(); try{ qi.setSelectionRange(qi.value.length,qi.value.length); }catch(e){} }
+  qi.onfocus=function(){ VN_QF=true; }; qi.onblur=function(){ VN_QF=false; };
+  qi.oninput=function(){ VN_Q=qi.value; VN_SCROLL[j.id]=0; vnSelRender(j); };
+  // Tích/bỏ tích: chỉ cập nhật nút và số đếm, KHÔNG vẽ lại danh sách
+  function updBtn(){
+    var n=ds.filter(function(x){ return x.t==="need" && sel[x.k]; }).length, b=el("vnGo"); if(!b) return;
+    b.disabled=!n; b.textContent=n?"Cập nhật "+n+" giáo viên đã chọn":"Tích chọn giáo viên cần cập nhật";
+  }
+  [].forEach.call(box.querySelectorAll("[data-vk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vk")]=c.checked; updBtn(); }; });
+  if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=true; }); [].forEach.call(box.querySelectorAll("[data-vk]:not(:disabled)"),function(c){ c.checked=true; }); updBtn(); };
+  if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); Object.keys(sel).forEach(function(k){ sel[k]=false; }); [].forEach.call(box.querySelectorAll("[data-vk]"),function(c){ c.checked=false; }); updBtn(); };
   el("vnGo").onclick=function(){
     var keys=ds.filter(function(x){ return x.t==="need" && sel[x.k]; }), b=el("vnGo");
     if(!keys.length){ toast("Chưa chọn giáo viên nào"); return; }

@@ -587,13 +587,14 @@ function openLinks(t){
 function vnAccs(){ try{ var a=JSON.parse(lsGet("aic_vnedu_acc")||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function vnSave(a){ lsSet("aic_vnedu_acc", JSON.stringify(a)); }
 function openVnedu(t){
-  var acc=vnAccs();
+  var t0=t, acc=vnAccs();
   var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div>'+
     '<p class="sh-d">Chọn trường cần cập nhật serial. Máy tính sẽ mở trang đăng nhập vnEdu, điền sẵn tên tài khoản; anh chỉ nhập mật khẩu (hoặc để Chrome tự điền).</p>';
   if(acc.length){
     h+=acc.map(function(a,i){ return '<div style="display:flex;gap:8px;margin-bottom:8px"><button class="gm" data-v="'+i+'" style="flex:1"><span class="ic">'+svg("users")+'</span><span><b>'+esc(a.truong)+'</b><small>'+esc(a.tk)+'</small></span><i>›</i></button>'+
       '<button class="btn danger" data-del="'+i+'" style="width:auto;padding:0 14px" aria-label="Xóa">✕</button></div>'; }).join("");
-  } else h+='<div class="note info">Chưa có trường nào được lưu. Thêm ở bên dưới.</div>';
+  } else h+='<div class="note info">Chưa có trường nào trên điện thoại này. Bấm “Lấy danh sách trường từ máy tính” hoặc thêm ở bên dưới.</div>';
+  h+='<button class="btn" id="vnSync">Lấy danh sách trường từ máy tính</button>';
   h+='<h3 class="sec">Thêm trường</h3>'+
     '<div class="fld"><label>Tên trường</label><input id="vnTr" type="text" placeholder="VD: THPT Chơn Thành"></div>'+
     '<div class="fld"><label>Tên tài khoản admin</label><input id="vnTk" type="text" autocapitalize="off" autocomplete="off" placeholder="VD: chonthanh.ct"><div class="sub">Chỉ lưu tên tài khoản trên điện thoại này. Mật khẩu không lưu ở đây.</div></div>'+
@@ -610,6 +611,28 @@ function openVnedu(t){
     acc.push({truong:tr, tk:tk}); vnSave(acc); openVnedu(t); toast("Đã lưu “"+tr+"”");
   };
   el("vnOpen").onclick=function(){ send({}); };
+  // Đồng bộ: máy tính gửi về TÊN TRƯỜNG + TÀI KHOẢN đã lưu trong extension (không có mật khẩu), gộp vào danh sách điện thoại
+  el("vnSync").onclick=function(){
+    var b=el("vnSync"); if(!connected()){ toast("Chưa kết nối máy tính"); return; }
+    b.disabled=true; b.textContent="Đang hỏi máy tính…";
+    api("job.enqueue",{tool:"vnedu_serial", params:{act:"ds_truong"}}).then(function(r){
+      var id=r.id, n=0;
+      (function poll(){
+        api("job.get",{id:id}).then(function(g){
+          var jj=g.job||{}, t=String(jj.ket_qua||""), i=t.indexOf("§ACC§");
+          if(jj.trang_thai==="done" && i>=0){
+            var got=JSON.parse(t.slice(i+5)), cur=vnAccs(), have={}, add=0;
+            cur.forEach(function(a){ have[a.tk]=1; });
+            got.forEach(function(a){ if(a.tk && !have[a.tk]){ cur.push({truong:a.truong, tk:a.tk}); add++; } });
+            vnSave(cur); toast(add?("Đã thêm "+add+" trường từ máy tính"):"Danh sách đã đủ, không có trường mới"); openVnedu(t0); return;
+          }
+          if(jj.trang_thai==="error"){ throw new Error(t||"Máy tính báo lỗi"); }
+          if(++n>30){ throw new Error("Máy tính chưa phản hồi. Kiểm tra máy tính đang bật và Chrome đang mở."); }
+          setTimeout(poll,2000);
+        }).catch(function(e){ b.disabled=false; b.textContent="Lấy danh sách trường từ máy tính"; toast("Lỗi: "+e.message); });
+      })();
+    }).catch(function(e){ b.disabled=false; b.textContent="Lấy danh sách trường từ máy tính"; toast("Lỗi: "+e.message); });
+  };
   el("vnClose").onclick=closeSheet;
 }
 function openTool(t, prefill, missing){

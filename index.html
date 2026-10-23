@@ -297,8 +297,8 @@ var TOOLS = [
   {id:"nhac_no", short:"Nhắc nợ", name:"Nhắc nợ khách hàng", sub:"Xem tình hình, gửi mail nhắc nợ", icon:"bell", ready:true, risk:"R2",
    desc:"Máy tính dùng dữ liệu đang có trong tool Nhắc nợ (kỳ đã lấy từ OneBSS). Gửi mail: máy tính gửi danh sách khách có email chưa gửi về đây, anh tick chọn rồi bấm Gửi mail.",
    fields:[
-     {k:"act", label:"Việc cần làm", type:"select", req:true, opts:[["tinh_hinh","Xem tình hình"],["gui_mail","Gửi mail nhắc nợ"]]},
-     {k:"nhom", label:"Nhóm khách", type:"select", when:["act","gui_mail"], opts:[["all","Tất cả"],["DN","Doanh nghiệp"],["CN","Cá nhân"]]}
+     {k:"act", label:"Việc cần làm", type:"select", req:true, opts:[["tinh_hinh","Xem tình hình"],["gui_mail","Gửi mail nhắc nợ"],["gui_lai","Gửi lại mail (khách đã gửi)"]]},
+     {k:"nhom", label:"Nhóm khách", type:"select", opts:[["all","Tất cả"],["DN","Doanh nghiệp"],["CN","Cá nhân"]]}
    ]},
   {id:"onebss", short:"OneBSS", name:"OneBSS", sub:"Upload hồ sơ, gia hạn CA/SmartCA", icon:"upload", ready:false},
   {id:"vnedu_admin", group:true, short:"Admin vnEdu", name:"Admin vnEdu", sub:"Công cụ quản trị vnEdu", icon:"users", ready:true},
@@ -498,7 +498,7 @@ function summary(j){
   if(j.tool==="bao_gia") return (p.ten||p.mst||"")+" · "+(p.dich_vu||"");
   if(j.tool==="hop_dong_web") return (p.mst||"")+" · "+(p.dich_vu||"");
   if(j.tool==="phan_loai") return "Tháng "+String(p.thang||"").replace("T","");
-  if(j.tool==="nhac_no") return p.act==="gui_mail"?("Gửi mail · "+({DN:"Doanh nghiệp",CN:"Cá nhân"}[p.nhom]||"Tất cả")):"Xem tình hình";
+  if(j.tool==="nhac_no") return p.act==="gui_mail"||p.act==="gui_lai"?((p.act==="gui_lai"?"Gửi lại mail · ":"Gửi mail · ")+({DN:"Doanh nghiệp",CN:"Cá nhân"}[p.nhom]||"Tất cả")):"Xem tình hình";
   if(j.tool==="tim_file") return p.trong?("Thư mục "+String(p.trong).split(/[\\\/]/).filter(Boolean).pop()):("“"+(p.q||"")+"”");
   if(j.tool==="lay_file") return p.paths?(p.paths.length+" file"):String(p.path||"").split(/[\\\/]/).pop();
   var bn=function(x){ return String(x||"").split(/[\\\/]/).filter(Boolean).pop()||""; };
@@ -921,7 +921,7 @@ function vnSelRender(j){
 /* ---------- Nhắc nợ: bảng tick chọn khách cần gửi mail ----------
    Danh sách từ máy tính (dòng §DS§). Mặc định KHÔNG tích ai. Bấm Gửi mail → ghi §CHON§[khóa…] rồi xác nhận;
    máy tính chỉ gửi đúng những khách này. */
-var NN_DS={}, NN_SEL={}, NN_Q="", NN_SCROLL={}, NN_QF=false;
+var NN_DS={}, NN_SEL={}, NN_EM={}, NN_Q="", NN_SCROLL={}, NN_QF=false, NN_FK=null, NN_FP=0;   // NN_FK: ô email đang gõ (giữ con trỏ khi màn hình tự làm mới)
 function nnSelRender(j){
   var box=el("nnList"); if(!box) return;
   var ds=NN_DS[j.id];
@@ -938,6 +938,8 @@ function nnSelRender(j){
     }
   }
   var sel=NN_SEL[j.id]||(NN_SEL[j.id]={});
+  var re=(j.params||{}).act==="gui_lai", em=NN_EM[j.id]||(NN_EM[j.id]={});   // gửi lại: cho sửa email nhận
+  var verb=re?"Gửi lại":"Gửi mail";
   var q=vnNorm(NN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n+" "+x.e).indexOf(q)>=0; });
   var nSel=ds.filter(function(x){return sel[x.k];}).length;
   var h='<div class="fld" style="margin-top:8px"><input id="nnQ" type="text" placeholder="Tìm khách (gõ không dấu được)…" value="'+esc(NN_Q)+'"></div>'+
@@ -948,10 +950,12 @@ function nnSelRender(j){
   h+=shown.map(function(x){
     return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #eef2f8;cursor:pointer">'+
       '<input type="checkbox" data-nk="'+esc(x.k)+'" '+(sel[x.k]?'checked ':'')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
-      '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br><span style="font-size:13px;color:#555">'+(x.g==="DN"?"🏢 ":"👤 ")+esc(x.e)+'</span><br>'+
-      '<span style="font-size:12.5px;color:#1565c0">'+fmtMoney(Math.round(+x.tien||0))+' đ · '+x.hd+' HĐ'+(x.pdf?'':' · <span style="color:#e65100">chưa tải PDF (máy tự tải)</span>')+'</span></span></label>';
+      '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br>'+(re?
+        '<input type="email" data-ne="'+esc(x.k)+'" value="'+esc(em[x.k]!=null?em[x.k]:x.e)+'" placeholder="Email nhận" style="width:100%;margin:4px 0;padding:6px 8px;border:1px solid #cfd8e6;border-radius:8px;font-size:14px"><br><span style="font-size:12.5px;color:#2e7d32">Đã gửi '+esc(x.lan||1)+' lần · gần nhất '+esc(x.at||"")+'</span><br>':
+        '<span style="font-size:13px;color:#555">'+(x.g==="DN"?"🏢 ":"👤 ")+esc(x.e)+'</span><br>')+
+      '<span style="font-size:12.5px;color:#1565c0">'+fmtMoney(Math.round(+x.tien||0))+' đ · '+x.hd+' HĐ'+(x.pdf?'':' · <span style="color:#e65100">'+(x.cloud?'chưa có PDF trên Google':'chưa tải PDF (máy tự tải)')+'</span>')+'</span></span></label>';
   }).join("")||'<div class="note info" style="margin:10px">Không có khách khớp.</div>';
-  h+='</div><button class="btn ok" id="nnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Gửi mail cho '+nSel+' khách đã chọn':'Tích chọn khách cần gửi')+'</button>';
+  h+='</div><button class="btn ok" id="nnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?verb+' cho '+nSel+' khách đã chọn':'Tích chọn khách cần gửi')+'</button>';
   box.innerHTML=h;
   var sc=el("nnScroll"); sc.scrollTop=NN_SCROLL[j.id]||0; sc.onscroll=function(){ NN_SCROLL[j.id]=sc.scrollTop; };
   var qi=el("nnQ");
@@ -960,8 +964,15 @@ function nnSelRender(j){
   qi.oninput=function(){ NN_Q=qi.value; NN_SCROLL[j.id]=0; nnSelRender(j); };
   function updBtn(){
     var n=ds.filter(function(x){ return sel[x.k]; }).length, b=el("nnGo"); if(!b) return;
-    b.disabled=!n; b.textContent=n?"Gửi mail cho "+n+" khách đã chọn":"Tích chọn khách cần gửi";
+    b.disabled=!n; b.textContent=n?verb+" cho "+n+" khách đã chọn":"Tích chọn khách cần gửi";
   }
+  [].forEach.call(box.querySelectorAll("[data-ne]"),function(i){
+    var k=i.getAttribute("data-ne");
+    i.oninput=function(){ em[k]=i.value; NN_FP=i.selectionStart||i.value.length; };
+    i.onfocus=function(){ NN_FK=k; }; i.onblur=function(){ if(NN_FK===k) NN_FK=null; };
+    i.onclick=function(e){ e.stopPropagation(); };
+    if(NN_FK===k){ i.focus(); try{ i.setSelectionRange(NN_FP,NN_FP); }catch(e){} }
+  });
   [].forEach.call(box.querySelectorAll("[data-nk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-nk")]=c.checked; updBtn(); }; });
   // "Chọn hết" chỉ chọn các khách đang hiện (theo ô tìm)
   el("nnAll").onclick=function(e){ e.preventDefault(); shown.forEach(function(x){ sel[x.k]=true; }); [].forEach.call(box.querySelectorAll("[data-nk]"),function(c){ c.checked=true; }); updBtn(); };
@@ -970,11 +981,13 @@ function nnSelRender(j){
     var keys=ds.filter(function(x){ return sel[x.k]; }), b=el("nnGo");
     if(!keys.length){ toast("Chưa chọn khách nào"); return; }
     var tong=keys.reduce(function(s,x){return s+(+x.tien||0);},0);
-    if(!confirm("GỬI MAIL NGAY cho "+keys.length+" khách ("+fmtMoney(tong)+" đ):\n- "+keys.slice(0,15).map(function(x){return x.n;}).join("\n- ")+(keys.length>15?"\n… và "+(keys.length-15)+" khách khác":"")+"\n\nKhách đã gửi trong kỳ sẽ tự bỏ qua.")) return;
+    var mailOf=function(x){ return String(em[x.k]!=null?em[x.k]:x.e||"").trim(); };
+    if(re){ var bad=keys.filter(function(x){ return !/^[^@\s]+@[^@\s]+\.[^@\s]+([;,\s]+[^@\s]+@[^@\s]+\.[^@\s]+)*$/.test(mailOf(x)); }); if(bad.length){ toast("Email chưa đúng: "+bad[0].n); return; } }
+    if(!confirm((re?"GỬI LẠI MAIL cho ":"GỬI MAIL NGAY cho ")+keys.length+" khách ("+fmtMoney(tong)+" đ):\n- "+keys.slice(0,15).map(function(x){return x.n+(re?" → "+mailOf(x):"");}).join("\n- ")+(keys.length>15?"\n… và "+(keys.length-15)+" khách khác":"")+(re?"\n\nEmail đã sửa sẽ được lưu vào danh bạ trên máy tính.":"\n\nKhách đã gửi trong kỳ sẽ tự bỏ qua."))) return;
     b.disabled=true; b.textContent="Đang gửi lệnh…";
-    api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" khách, đang chờ máy tính gửi…\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
+    api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" khách, đang chờ máy tính gửi…\n§CHON§"+JSON.stringify(keys.map(function(x){return re?{k:x.k,e:mailOf(x)}:x.k;}))})
       .then(function(){ answer(j.id,true); })
-      .catch(function(e){ b.disabled=false; b.textContent="Gửi mail cho "+keys.length+" khách đã chọn"; toast("Lỗi: "+e.message); });
+      .catch(function(e){ b.disabled=false; b.textContent=verb+" cho "+keys.length+" khách đã chọn"; toast("Lỗi: "+e.message); });
   };
 }
 var ansBusy=false;

@@ -293,8 +293,13 @@ var TOOLS = [
   {id:"copy_file", hidden:true, glow:"tim_file", short:"Copy file", name:"Copy / di chuyển", sub:"", icon:"folder", ready:true, risk:"R1", fields:[]},
   {id:"tao_thu_muc", hidden:true, glow:"tim_file", short:"Thư mục mới", name:"Tạo thư mục", sub:"", icon:"folder", ready:true, risk:"R1", fields:[]},
   {id:"nhan_file", hidden:true, glow:"tim_file", short:"Tải lên", name:"Gửi file lên máy", sub:"", icon:"upload", ready:true, risk:"R1", fields:[]},
-  /* Chưa liên kết: sẽ nối với app công nợ ở bước sau (đổi ready:true và thêm cách chạy khi nối) */
-  {id:"nhac_no", short:"Nhắc nợ", name:"Nhắc nợ khách hàng", sub:"Gửi nhắc nợ qua email/Zalo", icon:"bell", ready:false},
+  /* Nhắc nợ: nối với extension "VNPT Nhắc Nợ" (v1.7) trên máy tính. Gửi mail luôn qua bước tick chọn + xác nhận. */
+  {id:"nhac_no", short:"Nhắc nợ", name:"Nhắc nợ khách hàng", sub:"Xem tình hình, gửi mail nhắc nợ", icon:"bell", ready:true, risk:"R2",
+   desc:"Máy tính dùng dữ liệu đang có trong tool Nhắc nợ (kỳ đã lấy từ OneBSS). Gửi mail: máy tính gửi danh sách khách có email chưa gửi về đây, anh tick chọn rồi bấm Gửi mail.",
+   fields:[
+     {k:"act", label:"Việc cần làm", type:"select", req:true, opts:[["tinh_hinh","Xem tình hình"],["gui_mail","Gửi mail nhắc nợ"]]},
+     {k:"nhom", label:"Nhóm khách", type:"select", when:["act","gui_mail"], opts:[["all","Tất cả"],["DN","Doanh nghiệp"],["CN","Cá nhân"]]}
+   ]},
   {id:"onebss", short:"OneBSS", name:"OneBSS", sub:"Upload hồ sơ, gia hạn CA/SmartCA", icon:"upload", ready:false},
   {id:"vnedu_admin", group:true, short:"Admin vnEdu", name:"Admin vnEdu", sub:"Công cụ quản trị vnEdu", icon:"users", ready:true},
   {id:"vnedu_serial", parent:"vnedu_admin", short:"Serial vnEdu", name:"vnEdu – Serial", sub:"Cập nhật serial SmartCA giáo viên", icon:"users", ready:true, risk:"R2",
@@ -493,6 +498,7 @@ function summary(j){
   if(j.tool==="bao_gia") return (p.ten||p.mst||"")+" · "+(p.dich_vu||"");
   if(j.tool==="hop_dong_web") return (p.mst||"")+" · "+(p.dich_vu||"");
   if(j.tool==="phan_loai") return "Tháng "+String(p.thang||"").replace("T","");
+  if(j.tool==="nhac_no") return p.act==="gui_mail"?("Gửi mail · "+({DN:"Doanh nghiệp",CN:"Cá nhân"}[p.nhom]||"Tất cả")):"Xem tình hình";
   if(j.tool==="tim_file") return p.trong?("Thư mục "+String(p.trong).split(/[\\\/]/).filter(Boolean).pop()):("“"+(p.q||"")+"”");
   if(j.tool==="lay_file") return p.paths?(p.paths.length+" file"):String(p.path||"").split(/[\\\/]/).pop();
   var bn=function(x){ return String(x||"").split(/[\\\/]/).filter(Boolean).pop()||""; };
@@ -654,7 +660,8 @@ function openTool(t, prefill, missing){
     h+='</div>';
   });
   if(missing&&missing.length) h+='<div class="note">Còn thiếu: '+esc(missing.join(", "))+'. Anh bổ sung rồi gửi.</div>';
-  if(t.id==="vnedu_serial") h+='<div class="note">Bước 1 chỉ QUÉT, chưa sửa gì. Anh xem danh sách giáo viên cần cập nhật rồi bấm Xác nhận trên điện thoại thì mới ghi lên vnEdu.</div>';
+  if(t.id==="nhac_no") h+='<div class="note info">Gửi mail: bước 1 chỉ lấy DANH SÁCH khách chưa gửi, chưa gửi gì. Anh tick khách rồi bấm Gửi mail thì máy tính mới gửi.</div>';
+  else if(t.id==="vnedu_serial") h+='<div class="note">Bước 1 chỉ QUÉT, chưa sửa gì. Anh xem danh sách giáo viên cần cập nhật rồi bấm Xác nhận trên điện thoại thì mới ghi lên vnEdu.</div>';
   else if(t.risk==="R2") h+='<div class="note">Việc này ghi lên hệ thống VNPT. Hệ thống sẽ dừng lại chờ anh xác nhận, anh tự bấm Lưu trên máy tính.</div>';
   else if(t.id==="phan_loai") h+='<div class="note info">Chạy thử trước, chưa copy file. Anh xem kết quả rồi mới bấm “Chạy thật”.</div>';
   h+='<button class="btn" type="submit" id="btnSend">Gửi lệnh</button><button class="btn sec" type="button" id="btnClose">Đóng</button></form>';
@@ -766,7 +773,9 @@ function renderJobSheet(first){
   var isKh = j.tool==="hop_dong_web" && st==="await_confirm" && String(j.ket_qua||"").indexOf("⏸KHDN")===0;
   var fl=parseFiles(j);
   var isVnSel = j.tool==="vnedu_serial" && st==="await_confirm";
-  if(isVnSel) h+='<pre class="res" id="vnSum">'+esc(VN_DS["_s_"+j.id]||(j.cat_bot?"":String(j.ket_qua||"").split("§DS§")[0])||"Đang tải kết quả quét…")+'</pre><div id="vnList"></div>';
+  var isNnSel = j.tool==="nhac_no" && st==="await_confirm";
+  if(isNnSel) h+='<pre class="res" id="nnSum">'+esc(NN_DS["_s_"+j.id]||(j.cat_bot?"":String(j.ket_qua||"").split("§DS§")[0])||"Đang tải danh sách…")+'</pre><div id="nnList"></div>';
+  else if(isVnSel) h+='<pre class="res" id="vnSum">'+esc(VN_DS["_s_"+j.id]||(j.cat_bot?"":String(j.ket_qua||"").split("§DS§")[0])||"Đang tải kết quả quét…")+'</pre><div id="vnList"></div>';
   else if(j.cat_bot) h+='<div class="note info">Kết quả này dài, xem trong màn My Computer.</div><button class="btn" id="btnExOpen">Mở My Computer</button>';
   else if(fl) h+=fileListHtml(fl);                       // Tìm file: danh sách bấm được thay cho khung chữ
   else if(j.ket_qua) h+='<pre class="res">'+esc(String(j.ket_qua).replace(/^⏸KHDN\s*/,"⏸ "))+'</pre>';
@@ -784,7 +793,7 @@ function renderJobSheet(first){
   if(st==="await_confirm"){
     var txt = j.tool==="phan_loai"?"Chạy thật (copy file)":"Xác nhận, tiếp tục";
     if(j.tool==="hop_dong_web") { if(isKh){ h+='<div class="note">Khách hàng chưa có trong hệ thống. Máy tính đã điền sẵn form tạo khách hàng. Bấm nút bên dưới để máy tính TỰ bấm “Lưu”; lưu xong máy sẽ tự tạo hợp đồng và báo lại ở đây.</div>'; txt="Lưu khách hàng"; } else { h+='<div class="note">Hợp đồng đã được điền sẵn trên Chrome của máy tính. Bấm nút bên dưới để máy tính TỰ bấm “Hoàn thành” → “Lưu” trên hopdong.vnpt.vn.</div>'; txt="Xác nhận & Lưu hợp đồng"; } }
-    if(j.tool==="vnedu_serial") h+='<button class="btn danger" id="btnNo">Hủy việc này</button>';
+    if(j.tool==="vnedu_serial"||j.tool==="nhac_no") h+='<button class="btn danger" id="btnNo">Hủy việc này</button>';
     else h+='<button class="btn ok" id="btnYes">'+txt+'</button><button class="btn danger" id="btnNo">Hủy việc này</button>';
   }
   // Lệnh lỗi/đã hủy: chạy lại ngay với đúng dữ liệu cũ, khỏi nhập lại từ đầu
@@ -798,7 +807,7 @@ function renderJobSheet(first){
   // Bấm Đóng = DỪNG lệnh nếu lệnh đang treo (quá 3 phút không cập nhật) hoặc là vnEdu Serial đang chờ/chạy → không còn cảnh báo nữa.
   el("btnClose2").onclick=function(){
     var active=["queued","running","await_confirm","confirmed"].indexOf(st)>=0;
-    if(active && connected() && (stale || j.tool==="vnedu_serial")){
+    if(active && connected() && (stale || j.tool==="vnedu_serial" || (j.tool==="nhac_no" && st==="await_confirm"))){
       api("job.update",{id:j.id, trang_thai:"cancelled", ket_qua:"Đã dừng từ điện thoại"}).then(function(){ toast("Đã dừng lệnh"); refreshJobs(); }).catch(function(){});
     }
     closeSheet();
@@ -841,6 +850,7 @@ function renderJobSheet(first){
       .catch(function(e){ b.disabled=false; b.textContent="Chạy lại"; toast("Lỗi: "+e.message); });
   };
   if(isVnSel) vnSelRender(j);
+  if(isNnSel) nnSelRender(j);
   if(el("btnYes")) el("btnYes").onclick=function(){ answer(j.id,true); };
   if(el("btnNo")) el("btnNo").onclick=function(){ answer(j.id,false); };
 }
@@ -906,6 +916,65 @@ function vnSelRender(j){
     api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" giáo viên: "+keys.map(function(x){return x.n;}).join(", ")+"\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
       .then(function(){ answer(j.id,true); })
       .catch(function(e){ b.disabled=false; b.textContent="Cập nhật "+keys.length+" giáo viên đã chọn"; toast("Lỗi: "+e.message); });
+  };
+}
+/* ---------- Nhắc nợ: bảng tick chọn khách cần gửi mail ----------
+   Danh sách từ máy tính (dòng §DS§). Mặc định KHÔNG tích ai. Bấm Gửi mail → ghi §CHON§[khóa…] rồi xác nhận;
+   máy tính chỉ gửi đúng những khách này. */
+var NN_DS={}, NN_SEL={}, NN_Q="", NN_SCROLL={}, NN_QF=false;
+function nnSelRender(j){
+  var box=el("nnList"); if(!box) return;
+  var ds=NN_DS[j.id];
+  if(!ds){
+    var raw=String(j.ket_qua||""), k=raw.indexOf("§DS§");
+    if(k>=0 && !j.cat_bot){ try{ ds=NN_DS[j.id]=JSON.parse(raw.slice(k+4)); }catch(e){} }
+    if(!ds){
+      box.innerHTML='<div class="note info">Đang tải danh sách khách…</div>';
+      if(!NN_DS["_ld_"+j.id]){ NN_DS["_ld_"+j.id]=1;
+        api("job.get",{id:j.id}).then(function(r){ var t=String(r.job.ket_qua||""), i=t.indexOf("§DS§"); NN_DS[j.id]=i>=0?JSON.parse(t.slice(i+4)):[]; NN_DS["_s_"+j.id]=i>=0?t.slice(0,i):t; if(el("nnSum")) el("nnSum").textContent=NN_DS["_s_"+j.id]; nnSelRender(j); })
+          .catch(function(e){ NN_DS["_ld_"+j.id]=0; box.innerHTML='<div class="note">Không tải được danh sách: '+esc(e.message)+'</div>'; });
+      }
+      return;
+    }
+  }
+  var sel=NN_SEL[j.id]||(NN_SEL[j.id]={});
+  var q=vnNorm(NN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n+" "+x.e).indexOf(q)>=0; });
+  var nSel=ds.filter(function(x){return sel[x.k];}).length;
+  var h='<div class="fld" style="margin-top:8px"><input id="nnQ" type="text" placeholder="Tìm khách (gõ không dấu được)…" value="'+esc(NN_Q)+'"></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
+    '<span>Hiển thị '+shown.length+'/'+ds.length+'</span>'+
+    '<span><a href="#" id="nnAll" style="margin-right:10px">Chọn hết</a><a href="#" id="nnNone">Bỏ chọn</a></span></div>'+
+    '<div id="nnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
+  h+=shown.map(function(x){
+    return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #eef2f8;cursor:pointer">'+
+      '<input type="checkbox" data-nk="'+esc(x.k)+'" '+(sel[x.k]?'checked ':'')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
+      '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br><span style="font-size:13px;color:#555">'+(x.g==="DN"?"🏢 ":"👤 ")+esc(x.e)+'</span><br>'+
+      '<span style="font-size:12.5px;color:#1565c0">'+fmtMoney(Math.round(+x.tien||0))+' đ · '+x.hd+' HĐ'+(x.pdf?'':' · <span style="color:#e65100">chưa tải PDF (máy tự tải)</span>')+'</span></span></label>';
+  }).join("")||'<div class="note info" style="margin:10px">Không có khách khớp.</div>';
+  h+='</div><button class="btn ok" id="nnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Gửi mail cho '+nSel+' khách đã chọn':'Tích chọn khách cần gửi')+'</button>';
+  box.innerHTML=h;
+  var sc=el("nnScroll"); sc.scrollTop=NN_SCROLL[j.id]||0; sc.onscroll=function(){ NN_SCROLL[j.id]=sc.scrollTop; };
+  var qi=el("nnQ");
+  if(NN_QF){ qi.focus(); try{ qi.setSelectionRange(qi.value.length,qi.value.length); }catch(e){} }
+  qi.onfocus=function(){ NN_QF=true; }; qi.onblur=function(){ NN_QF=false; };
+  qi.oninput=function(){ NN_Q=qi.value; NN_SCROLL[j.id]=0; nnSelRender(j); };
+  function updBtn(){
+    var n=ds.filter(function(x){ return sel[x.k]; }).length, b=el("nnGo"); if(!b) return;
+    b.disabled=!n; b.textContent=n?"Gửi mail cho "+n+" khách đã chọn":"Tích chọn khách cần gửi";
+  }
+  [].forEach.call(box.querySelectorAll("[data-nk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-nk")]=c.checked; updBtn(); }; });
+  // "Chọn hết" chỉ chọn các khách đang hiện (theo ô tìm)
+  el("nnAll").onclick=function(e){ e.preventDefault(); shown.forEach(function(x){ sel[x.k]=true; }); [].forEach.call(box.querySelectorAll("[data-nk]"),function(c){ c.checked=true; }); updBtn(); };
+  el("nnNone").onclick=function(e){ e.preventDefault(); Object.keys(sel).forEach(function(k){ sel[k]=false; }); [].forEach.call(box.querySelectorAll("[data-nk]"),function(c){ c.checked=false; }); updBtn(); };
+  el("nnGo").onclick=function(){
+    var keys=ds.filter(function(x){ return sel[x.k]; }), b=el("nnGo");
+    if(!keys.length){ toast("Chưa chọn khách nào"); return; }
+    var tong=keys.reduce(function(s,x){return s+(+x.tien||0);},0);
+    if(!confirm("GỬI MAIL NGAY cho "+keys.length+" khách ("+fmtMoney(tong)+" đ):\n- "+keys.slice(0,15).map(function(x){return x.n;}).join("\n- ")+(keys.length>15?"\n… và "+(keys.length-15)+" khách khác":"")+"\n\nKhách đã gửi trong kỳ sẽ tự bỏ qua.")) return;
+    b.disabled=true; b.textContent="Đang gửi lệnh…";
+    api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" khách, đang chờ máy tính gửi…\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
+      .then(function(){ answer(j.id,true); })
+      .catch(function(e){ b.disabled=false; b.textContent="Gửi mail cho "+keys.length+" khách đã chọn"; toast("Lỗi: "+e.message); });
   };
 }
 var ansBusy=false;

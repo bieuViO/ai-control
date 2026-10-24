@@ -275,6 +275,10 @@ var TOOLS = [
   /* Tool dạng liên kết: bấm là mở app có sẵn (không đi qua hàng đợi). Đổi link ở đây nếu app đổi địa chỉ. */
   {id:"cong_no", short:"My Data", name:"My Data", sub:"Mở app theo dõi công nợ", icon:"wallet", ready:true, risk:"R0",
    link:"https://claude.ai/artifact/JXWt6JKKdSF9NmBWHEdgJg"},
+  /* Tra cứu khách hàng: gõ MST hoặc tên, gộp công nợ (cache từ tool Nhắc nợ) + hạn dùng dịch vụ (Sheet KHÁCH HÀNG).
+     Không qua hàng đợi máy tính — gọi thẳng backend nên trả kết quả ngay. Cần Code.gs có action "khach.tong_hop". */
+  {id:"tra_cuu", short:"Tra cứu KH", name:"Tra cứu khách hàng", sub:"Công nợ · hạn dùng · hợp đồng theo MST/tên", icon:"search", ready:true, risk:"R0",
+   desc:"Gõ mã số thuế hoặc tên khách để xem nhanh công nợ, hạn hợp đồng/CA/VAN — gộp từ các nguồn đã nối, không cần mở từng công cụ."},
   /* Tool Hỗ trợ khách: không qua hàng đợi, mở màn riêng (gửi tool + kết nối RustDesk) */
   {id:"ho_tro", short:"Hỗ trợ", name:"Hỗ trợ khách hàng", sub:"Gửi tool cho khách, kết nối RustDesk", icon:"headset", ready:true, risk:"R0", support:true},
   /* Tìm file trên máy (ổ D, Downloads, Desktop). Bấm vào kết quả để lấy file về điện thoại / gửi Zalo. */
@@ -645,6 +649,7 @@ function openTool(t, prefill, missing){
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
+  if(t.id==="tra_cuu"){ openTraCuu(prefill); return; }   // Tra cứu khách hàng (công nợ + hạn dùng): màn riêng, không qua hàng đợi
   if(!t.ready){ openSoon(t); return; }
   if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
   if(t.support){ openSupport(); return; }
@@ -1034,11 +1039,77 @@ function pingNow(){
   }).catch(function(){ setChip("dBack","tBack","warn","Mất kết nối"); return false; });
 }
 
+/* =====================================================================
+   TRA CỨU KHÁCH HÀNG — gõ MST hoặc tên, gộp công nợ + hạn dùng dịch vụ.
+   Gọi thẳng 1 action backend (khach.tong_hop), KHÔNG qua hàng đợi máy tính nên trả kết quả ngay.
+   Nếu chưa dán action này vào Code.gs, màn hình sẽ báo rõ để anh biết cần cập nhật backend.
+   ===================================================================== */
+function openTraCuu(prefill){
+  var q0=(prefill&&prefill.q)||"";
+  var h='<div class="sh-h"><span class="ic">'+svg("search")+'</span><div><b>Tra cứu khách hàng</b><div class="sub">Công nợ · hạn dùng dịch vụ · hợp đồng — gộp từ các nguồn đã nối</div></div></div>'+
+    '<form id="tcQ" class="exq" autocomplete="off"><input name="q" type="text" placeholder="Nhập MST hoặc tên khách…" value="'+esc(q0)+'"><button type="submit">Tra cứu</button></form>'+
+    '<div id="tcOut"></div><button class="btn sec" id="tcClose">Đóng</button>';
+  openSheet(h);
+  el("tcClose").onclick=closeSheet;
+  el("tcQ").onsubmit=function(e){ e.preventDefault(); var q=this.q.value.trim(); if(q) tcRun(q); };
+  if(q0) tcRun(q0);
+}
+function tcRun(q){
+  var box=el("tcOut"); if(!box) return;
+  box.innerHTML='<div class="empty">Đang tra cứu…</div>';
+  if(!connected()){ box.innerHTML='<div class="note err">Chưa kết nối backend. Vào Cài đặt để kết nối.</div>'; return; }
+  api("khach.tong_hop",{q:q}).then(function(r){ tcRender(r,q); })
+    .catch(function(e){
+      var m=/không hợp lệ[:\s]*khach\.tong_hop/i.test(e.message) ? "Backend chưa có chức năng tra cứu này. Cần dán thêm action “khach.tong_hop” vào Code.gs rồi triển khai lại." : e.message;
+      box.innerHTML='<div class="note err">'+esc(m)+'</div>';
+    });
+}
+function tcMoney(n){ return n?fmtMoney(Math.round(+n||0))+" đ":"—"; }
+function tcRender(r,q){
+  var box=el("tcOut"); if(!box) return;
+  if(r.multi && r.multi.length){
+    box.innerHTML='<div class="note info">Có '+r.multi.length+' khách khớp “'+esc(q)+'”, chạm để chọn đúng khách:</div>'+
+      r.multi.map(function(m,i){ return '<button type="button" class="gm" data-m="'+i+'"><span class="ic">'+svg("users")+'</span><span><b>'+esc(m.ten)+'</b><small>'+esc(m.mst||"")+'</small></span><i>›</i></button>'; }).join("");
+    Array.prototype.forEach.call(box.querySelectorAll("[data-m]"),function(b){
+      b.onclick=function(){ var m=r.multi[+b.getAttribute("data-m")]; tcRun(m.mst||m.ten); };
+    });
+    return;
+  }
+  if(!r.found){ box.innerHTML='<div class="note">Không thấy khách khớp “'+esc(q)+'”. Thử MST đầy đủ hoặc đúng tên hơn.</div>'; return; }
+  var k=r.khach||{}, cn=r.cong_no, dv=r.dich_vu||[];
+  var h='<div class="ht-card"><h4>'+esc(k.ten||q)+'</h4><p class="sub" style="margin:4px 0 0">'+
+    [k.mst,k.dien_thoai,k.email].filter(Boolean).map(esc).join(" · ")+(k.tinh_trang?' · '+esc(k.tinh_trang):"")+'</p></div>';
+  h+='<div class="ht-card"><h4>Công nợ</h4>'+(cn
+    ? ('<p class="sub" style="margin:4px 0;font-weight:700;color:'+(+cn.tong_tien>0?"var(--err)":"var(--ok)")+'">'+tcMoney(cn.tong_tien)+(cn.so_hd?(' · '+cn.so_hd+' hợp đồng'):'')+'</p>'+
+       (cn.han_gan_nhat?'<p class="sub" style="margin:0">Hạn gần nhất: '+esc(cn.han_gan_nhat)+'</p>':'')+
+       (cn.cap_nhat_luc?'<p class="sub" style="margin:0;color:var(--mute)">Cập nhật lúc '+esc(cn.cap_nhat_luc)+'</p>':''))
+    : '<p class="sub" style="margin:4px 0">Chưa có dữ liệu công nợ cho khách này. Chạy “Nhắc nợ › Xem tình hình” một lần để cập nhật.</p>')+'</div>';
+  if(dv.length){
+    h+='<div class="ht-card"><h4>Hạn dùng dịch vụ</h4>'+dv.map(function(x){
+      var sapHet = x.con_lai_ngay!=null && +x.con_lai_ngay<=30;
+      return '<div class="ht-it" style="justify-content:flex-start"><div><div class="mt" style="font-weight:700;color:var(--text)">'+esc(x.ten)+'</div><div class="mt">'+
+        [x.ngay_tao?("Tạo "+x.ngay_tao):"",x.han_dung?("Hạn "+x.han_dung):"",x.trang_thai].filter(Boolean).map(esc).join(" · ")+'</div></div>'+
+        (sapHet?'<span class="tag await_confirm" style="margin-left:auto">Sắp hết hạn</span>':'')+'</div>';
+    }).join("")+'</div>';
+  }
+  h+='<div class="note info">Nguồn: '+esc((r.nguon||[]).join(", ")||"Sheet KHÁCH HÀNG")+'</div>';
+  h+='<div class="exv-act" style="margin-top:12px"><button type="button" id="tcOpenKh">'+svg("users")+' Mở trong Bảng khách hàng</button>'+
+     '<button type="button" id="tcOpenNn">'+svg("bell")+' Mở Nhắc nợ</button></div>';
+  box.innerHTML=h;
+  if(el("tcOpenKh")) el("tcOpenKh").onclick=function(){ if(typeof SH==="object") SH.q=k.mst||k.ten||q; closeSheet(); setTimeout(function(){ if(typeof openKhach==="function") openKhach(); else toast("Chưa tải được sheets.js, hãy tải lại trang"); },150); };
+  if(el("tcOpenNn")) el("tcOpenNn").onclick=function(){ closeSheet(); setTimeout(function(){ openTool(toolById("nhac_no")); },150); };
+}
+
 /* ---------- ô lệnh tự do + giọng nói ---------- */
 el("cmdForm").onsubmit=function(e){
   e.preventDefault();
   var v=el("cmdInput").value.trim(); if(!v) return;
   if(!connected()){ toast("Cần kết nối backend (Cài đặt) để dịch lệnh"); return; }
+  // Lối tắt: gõ thẳng MST, hoặc "công nợ/tra cứu/hết hạn + tên" → mở thẳng Tra cứu khách hàng, khỏi chờ AI dịch lệnh
+  var mstQ=v.replace(/[\s.-]/g,""), hint=(v.match(/^(công nợ|tra cứu|hết hạn|thông tin khách)\s+(.+)$/i)||[])[2];
+  if(/^\d{9,13}$/.test(mstQ) || hint){
+    el("cmdInput").value=""; toggleCmd(false); openTool(toolById("tra_cuu"), {q:(hint||mstQ).trim()}); return;
+  }
   el("cmdHint").textContent="Đang dịch lệnh…";
   api("ai.parse",{text:v}).then(function(r){
     var p=r.parsed||{}, t=toolById(p.tool);

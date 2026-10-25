@@ -649,7 +649,7 @@ function openTool(t, prefill, missing){
   if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
   if(t.support){ openSupport(); return; }
   if(!prefill && TOOLS.some(function(c){return c.parent===t.id;})){ openGroup(t); return; }
-  if(t.link){ toast("Đang mở “"+t.name+"”…"); var w=window.open(t.link,"_blank","noopener"); if(!w) location.href=t.link; return; }
+  if(t.link){ toast("Đang mở “"+t.name+"”…"); var a=document.createElement("a"); a.href=t.link; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove(); return; }   /* luôn mở TAB MỚI, không đè lên AI Control (window.open + noopener luôn trả null nên bản cũ rơi vào location.href) */
   var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">'+esc(t.desc)+'</p><form id="tf" autocomplete="off">';
   t.fields.forEach(function(f){
     var v=prefill&&prefill[f.k]!=null?prefill[f.k]:"";

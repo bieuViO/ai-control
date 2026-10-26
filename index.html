@@ -763,6 +763,8 @@ var FLOW = ["queued","running","await_confirm","done"];
 function openJob(id){ openJobId=id; renderJobSheet(true); }
 function renderJobSheet(first){
   var j=JOBS.filter(function(x){return x.id===openJobId;})[0]; if(!j){ return; }
+  // vnEdu Serial đang hiện bảng chọn và dữ liệu không đổi → KHÔNG vẽ lại (vẽ lại làm mất ô tìm kiếm/bàn phím và vị trí cuộn)
+  if(!first && j.tool==="vnedu_serial" && j.trang_thai==="await_confirm" && VN_REND===j.id+"|"+String(j.ket_qua||"").length && el("vnQ")) return;
   var t=toolById(j.tool)||{name:j.tool,icon:"chip"};
   var st=j.trang_thai, idx=st==="confirmed"?2:FLOW.indexOf(st);
   var bar='<div class="steps">'+FLOW.map(function(s,i){
@@ -858,7 +860,7 @@ function renderJobSheet(first){
    Danh sách lấy từ kết quả quét (dòng §DS§ do máy tính gửi). Mặc định KHÔNG tích ai.
    Chỉ dòng "cần cập nhật" mới tích được. Bấm Cập nhật → ghi §CHON§[id…] rồi xác nhận;
    máy tính chỉ ghi đúng những người này, không đụng giáo viên khác. */
-var VN_DS={}, VN_SEL={}, VN_Q="", VN_SCROLL={}, VN_QF=false;
+var VN_DS={}, VN_SEL={}, VN_Q="", VN_SCROLL={}, VN_QF=false, VN_REND="";   // VN_REND: dấu hiệu bảng chọn đã vẽ (để lần tự làm mới sau không vẽ lại, giữ bàn phím)
 function vnNorm(x){ return String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
 function vnSelRender(j){
   var box=el("vnList"); if(!box) return;
@@ -877,46 +879,59 @@ function vnSelRender(j){
   }
   var sel=VN_SEL[j.id]||(VN_SEL[j.id]={});
   var LBL={need:["Cần cập nhật","#c62828"],ok:["Đã dùng serial mới nhất","#2e7d32"],manual:["Có 2 serial cùng ngày, cần chọn tay trên máy","#e65100"],nocert:["Chưa có chứng thư hợp lệ","#777"],notk:["Chưa có tài khoản ký số","#777"],err:["Không đọc được serial (vnEdu không trả dữ liệu) — kiểm tra tay trên máy","#e65100"]};
-  var q=vnNorm(VN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n).indexOf(q)>=0; });
-  var nNeed=ds.filter(function(x){return x.t==="need";}).length, nSel=Object.keys(sel).filter(function(k){return sel[k];}).length;
-  var h='<div class="fld" style="margin-top:8px"><input id="vnQ" type="text" placeholder="Tìm theo tên (gõ không dấu được)…" value="'+esc(VN_Q)+'"></div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
-    '<span>Hiển thị '+shown.length+'/'+ds.length+' · cần cập nhật '+nNeed+'</span>'+
-    (nNeed?'<span><a href="#" id="vnAll" style="margin-right:10px">Chọn hết cần cập nhật</a><a href="#" id="vnNone">Bỏ chọn</a></span>':'')+'</div>'+
-    '<div id="vnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
-  h+=shown.map(function(x){
-    var lb=LBL[x.t]||[x.t,"#777"], can=x.t==="need", on=can&&sel[x.k];
-    var line2=x.t==="need"?('Serial: '+esc(x.c||"(trống)")+' → <b style="color:#1565c0">'+esc(x.m||"")+'</b>'+(x.h?' · đến '+esc(x.h):'')):
-      ('Serial: '+esc(x.c||"(trống)")+(x.h?' · HH: <b style="color:#2e7d32">'+esc(x.h)+'</b>':''));
-    return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #eef2f8;'+(can?'cursor:pointer':'opacity:.75')+'">'+
-      '<input type="checkbox" data-vk="'+esc(x.k)+'" '+(on?'checked ':'')+(can?'':'disabled ')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
-      '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br><span style="font-size:13px;color:#555">'+line2+'</span><br><span style="font-size:12.5px;color:'+lb[1]+'">'+esc(lb[0])+'</span></span></label>';
-  }).join("")||'<div class="note info" style="margin:10px">Không có giáo viên khớp.</div>';
-  h+='</div><button class="btn ok" id="vnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Cập nhật '+nSel+' giáo viên đã chọn':'Tích chọn giáo viên cần cập nhật')+'</button>';
-  box.innerHTML=h;
-  // Giữ nguyên vị trí cuộn khi app tự làm mới hoặc khi tích chọn (trước đây bị nhảy về đầu danh sách)
-  var sc=el("vnScroll"); sc.scrollTop=VN_SCROLL[j.id]||0; sc.onscroll=function(){ VN_SCROLL[j.id]=sc.scrollTop; };
-  var qi=el("vnQ");
+  function can(x){ return x.t==="need" || !!x.a; }   // need = cần cập nhật; x.a = đang dùng serial mới nhất nhưng còn serial hợp lệ thứ 2 → cho đổi qua lại (A↔B)
+  // Ô tìm kiếm dựng 1 LẦN; gõ chữ chỉ vẽ lại phần danh sách (#vnBody) → bàn phím và bộ gõ tiếng Việt không bị ngắt
+  box.innerHTML='<div class="fld" style="margin-top:8px"><input id="vnQ" type="text" placeholder="Tìm theo tên (gõ không dấu được)…" autocomplete="off"></div><div id="vnBody"></div>';
+  var qi=el("vnQ"); qi.value=VN_Q;
   if(VN_QF){ qi.focus(); try{ qi.setSelectionRange(qi.value.length,qi.value.length); }catch(e){} }
-  qi.onfocus=function(){ VN_QF=true; }; qi.onblur=function(){ VN_QF=false; };
-  qi.oninput=function(){ VN_Q=qi.value; VN_SCROLL[j.id]=0; vnSelRender(j); };
-  // Tích/bỏ tích: chỉ cập nhật nút và số đếm, KHÔNG vẽ lại danh sách
-  function updBtn(){
-    var n=ds.filter(function(x){ return x.t==="need" && sel[x.k]; }).length, b=el("vnGo"); if(!b) return;
-    b.disabled=!n; b.textContent=n?"Cập nhật "+n+" giáo viên đã chọn":"Tích chọn giáo viên cần cập nhật";
+  qi.onfocus=function(){ VN_QF=true; };
+  qi.onblur=function(){ setTimeout(function(){ if(qi.isConnected) VN_QF=false; },0); };   // chỉ tính là "rời ô" khi ô còn trên màn hình (không tính lúc màn hình tự làm mới)
+  qi.oninput=function(){ VN_Q=qi.value; VN_SCROLL[j.id]=0; body(); };
+  function body(){
+    var bx=el("vnBody"); if(!bx) return;
+    var q=vnNorm(VN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n).indexOf(q)>=0; });
+    var nNeed=ds.filter(function(x){return x.t==="need";}).length, nSel=ds.filter(function(x){ return can(x) && sel[x.k]; }).length;
+    var h='<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
+      '<span>Hiển thị '+shown.length+'/'+ds.length+' · cần cập nhật '+nNeed+'</span>'+
+      (nNeed?'<span><a href="#" id="vnAll" style="margin-right:10px">Chọn hết cần cập nhật</a><a href="#" id="vnNone">Bỏ chọn</a></span>':'')+'</div>'+
+      '<div id="vnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
+    h+=shown.map(function(x){
+      var lb=LBL[x.t]||[x.t,"#777"], line2, ok=can(x), on=ok&&sel[x.k];
+      if(x.t==="need"){ line2='Serial: '+esc(x.c||"(trống)")+' → <b style="color:#1565c0">'+esc(x.m||"")+'</b>'+(x.h?' · đến '+esc(x.h):''); }
+      else {
+        line2='Serial: '+esc(x.c||"(trống)")+(x.h?' · HH: <b style="color:#2e7d32">'+esc(x.h)+'</b>':'');
+        if(x.a){ lb=["Có "+(x.v||2)+" serial hợp lệ — tích để ĐỔI sang serial còn lại","#1565c0"];
+          line2+='<br>Serial còn lại: <b style="color:#1565c0">'+esc(x.a.m)+'</b>'+(x.a.h?' · đến '+esc(x.a.h):''); }
+        else if(x.x){ line2+='<br>vnEdu còn: '+esc(x.x)+' (không đổi được)'; }
+      }
+      return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #eef2f8;'+(ok?'cursor:pointer':'opacity:.75')+'">'+
+        '<input type="checkbox" data-vk="'+esc(x.k)+'" '+(on?'checked ':'')+(ok?'':'disabled ')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
+        '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br><span style="font-size:13px;color:#555">'+line2+'</span><br><span style="font-size:12.5px;color:'+lb[1]+'">'+esc(lb[0])+'</span></span></label>';
+    }).join("")||'<div class="note info" style="margin:10px">Không có giáo viên khớp.</div>';
+    h+='</div><button class="btn ok" id="vnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Cập nhật '+nSel+' giáo viên đã chọn':'Tích chọn giáo viên cần cập nhật')+'</button>';
+    bx.innerHTML=h;
+    // Giữ nguyên vị trí cuộn khi tích chọn / gõ tìm kiếm
+    var sc=el("vnScroll"); sc.scrollTop=VN_SCROLL[j.id]||0; sc.onscroll=function(){ VN_SCROLL[j.id]=sc.scrollTop; };
+    // Tích/bỏ tích: chỉ cập nhật nút và số đếm, KHÔNG vẽ lại danh sách
+    function updBtn(){
+      var n=ds.filter(function(x){ return can(x) && sel[x.k]; }).length, b=el("vnGo"); if(!b) return;
+      b.disabled=!n; b.textContent=n?"Cập nhật "+n+" giáo viên đã chọn":"Tích chọn giáo viên cần cập nhật";
+    }
+    [].forEach.call(bx.querySelectorAll("[data-vk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vk")]=c.checked; updBtn(); }; });
+    if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=true; }); [].forEach.call(bx.querySelectorAll("[data-vk]:not(:disabled)"),function(c){ var x=ds.filter(function(d){return d.k===c.getAttribute("data-vk");})[0]; if(x&&x.t==="need") c.checked=true; }); updBtn(); };
+    if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); Object.keys(sel).forEach(function(k){ sel[k]=false; }); [].forEach.call(bx.querySelectorAll("[data-vk]"),function(c){ c.checked=false; }); updBtn(); };
+    el("vnGo").onclick=function(){
+      var keys=ds.filter(function(x){ return can(x) && sel[x.k]; }), b=el("vnGo");
+      if(!keys.length){ toast("Chưa chọn giáo viên nào"); return; }
+      if(!confirm("Cập nhật serial cho "+keys.length+" giáo viên:\n- "+keys.map(function(x){return x.n+" → "+(x.a?x.a.m:(x.m||""));}).join("\n- ")+"\n\nGiáo viên khác KHÔNG bị thay đổi.")) return;
+      b.disabled=true; b.textContent="Đang gửi…";
+      api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" giáo viên: "+keys.map(function(x){return x.n;}).join(", ")+"\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
+        .then(function(){ answer(j.id,true); })
+        .catch(function(e){ b.disabled=false; b.textContent="Cập nhật "+keys.length+" giáo viên đã chọn"; toast("Lỗi: "+e.message); });
+    };
   }
-  [].forEach.call(box.querySelectorAll("[data-vk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vk")]=c.checked; updBtn(); }; });
-  if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=true; }); [].forEach.call(box.querySelectorAll("[data-vk]:not(:disabled)"),function(c){ c.checked=true; }); updBtn(); };
-  if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); Object.keys(sel).forEach(function(k){ sel[k]=false; }); [].forEach.call(box.querySelectorAll("[data-vk]"),function(c){ c.checked=false; }); updBtn(); };
-  el("vnGo").onclick=function(){
-    var keys=ds.filter(function(x){ return x.t==="need" && sel[x.k]; }), b=el("vnGo");
-    if(!keys.length){ toast("Chưa chọn giáo viên nào"); return; }
-    if(!confirm("Cập nhật serial cho "+keys.length+" giáo viên:\n- "+keys.map(function(x){return x.n;}).join("\n- ")+"\n\nGiáo viên khác KHÔNG bị thay đổi.")) return;
-    b.disabled=true; b.textContent="Đang gửi…";
-    api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" giáo viên: "+keys.map(function(x){return x.n;}).join(", ")+"\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
-      .then(function(){ answer(j.id,true); })
-      .catch(function(e){ b.disabled=false; b.textContent="Cập nhật "+keys.length+" giáo viên đã chọn"; toast("Lỗi: "+e.message); });
-  };
+  body();
+  VN_REND=j.id+"|"+String(j.ket_qua||"").length;
 }
 /* ---------- Nhắc nợ: bảng tick chọn khách cần gửi mail ----------
    Danh sách từ máy tính (dòng §DS§). Mặc định KHÔNG tích ai. Bấm Gửi mail → ghi §CHON§[khóa…] rồi xác nhận;

@@ -879,7 +879,9 @@ function vnSelRender(j){
   }
   var sel=VN_SEL[j.id]||(VN_SEL[j.id]={});
   var LBL={need:["Cần cập nhật","#c62828"],ok:["Đã dùng serial mới nhất","#2e7d32"],manual:["Có 2 serial cùng ngày, cần chọn tay trên máy","#e65100"],nocert:["Chưa có chứng thư hợp lệ","#777"],notk:["Chưa có tài khoản ký số","#777"],err:["Không đọc được serial (vnEdu không trả dữ liệu) — kiểm tra tay trên máy","#e65100"]};
-  function can(x){ return x.t==="need" || !!x.a; }   // need = cần cập nhật; x.a = đang dùng serial mới nhất nhưng còn serial hợp lệ thứ 2 → cho đổi qua lại (A↔B)
+  function mult(x){ return !!(x.o && x.o.length>1); }          // giáo viên có từ 2 serial hợp lệ → hiện danh sách để bấm chọn
+  function can(x){ return x.t==="need" || mult(x); }
+  function pickM(x){ var o=(x.o||[]).filter(function(i){return i.z===sel[x.k];})[0]; return o?o.m:""; }   // 6 số cuối serial đã chọn
   // Ô tìm kiếm dựng 1 LẦN; gõ chữ chỉ vẽ lại phần danh sách (#vnBody) → bàn phím và bộ gõ tiếng Việt không bị ngắt
   box.innerHTML='<div class="fld" style="margin-top:8px"><input id="vnQ" type="text" placeholder="Tìm theo tên (gõ không dấu được)…" autocomplete="off"></div><div id="vnBody"></div>';
   var qi=el("vnQ"); qi.value=VN_Q;
@@ -896,36 +898,50 @@ function vnSelRender(j){
       (nNeed?'<span><a href="#" id="vnAll" style="margin-right:10px">Chọn hết cần cập nhật</a><a href="#" id="vnNone">Bỏ chọn</a></span>':'')+'</div>'+
       '<div id="vnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
     h+=shown.map(function(x){
-      var lb=LBL[x.t]||[x.t,"#777"], line2, ok=can(x), on=ok&&sel[x.k];
-      if(x.t==="need"){ line2='Serial: '+esc(x.c||"(trống)")+' → <b style="color:#1565c0">'+esc(x.m||"")+'</b>'+(x.h?' · đến '+esc(x.h):''); }
-      else {
-        line2='Serial: '+esc(x.c||"(trống)")+(x.h?' · HH: <b style="color:#2e7d32">'+esc(x.h)+'</b>':'');
-        if(x.a){ lb=["Có "+(x.v||2)+" serial hợp lệ — tích để ĐỔI sang serial còn lại","#1565c0"];
-          line2+='<br>Serial còn lại: <b style="color:#1565c0">'+esc(x.a.m)+'</b>'+(x.a.h?' · đến '+esc(x.a.h):''); }
-        else if(x.x){ line2+='<br>vnEdu còn: '+esc(x.x)+' (không đổi được)'; }
+      var lb=LBL[x.t]||[x.t,"#777"], line2, ok=can(x), on=ok&&!!sel[x.k];
+      if(mult(x)){
+        // Nhiều serial hợp lệ: mỗi serial là 1 nút bấm; bấm serial KHÁC "Đang dùng" để chọn, bấm lại để bỏ chọn
+        if(x.t==="need") lb=LBL.need; else if(x.t==="manual") lb=["Có "+x.o.length+" serial cấp cùng ngày — bấm chọn serial cần dùng","#e65100"]; else lb=["Có "+x.o.length+" serial hợp lệ — bấm chọn serial cần dùng","#1565c0"];
+        var opts=x.o.map(function(o){
+          var on2=sel[x.k]===o.z, bd=on2?"#1565c0":"#dfe6f2";
+          return '<div data-vk="'+esc(x.k)+'" data-vz="'+esc(o.z)+'" style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:10px;border-radius:10px;border:2px solid '+bd+';background:'+(on2?'#e8f0fe':'#fff')+';cursor:pointer">'+
+            '<span style="flex:none;width:20px;height:20px;border-radius:50%;border:2px solid '+(on2?'#1565c0':'#9aa8c4')+';display:flex;align-items:center;justify-content:center">'+(on2?'<i style="width:10px;height:10px;border-radius:50%;background:#1565c0"></i>':'')+'</span>'+
+            '<span style="flex:1;min-width:0;font-size:13.5px;color:#333"><b>'+esc(o.m)+'</b>'+(o.f?' · cấp '+esc(o.f):'')+(o.h?' · đến <b style="color:#2e7d32">'+esc(o.h)+'</b>':'')+'</span>'+
+            (o.c?'<span style="flex:none;font-size:11.5px;font-weight:bold;color:#2e7d32;background:#e6f4ea;border-radius:8px;padding:2px 7px">Đang dùng</span>':'')+'</div>';
+        }).join("");
+        return '<div style="padding:10px 12px;border-bottom:1px solid #eef2f8"><b>'+esc(x.n)+'</b><div style="font-size:12.5px;color:'+lb[1]+';margin-top:2px">'+esc(lb[0])+'</div>'+opts+'</div>';
       }
+      if(x.t==="need"){ line2='Serial: '+esc(x.c||"(trống)")+' → <b style="color:#1565c0">'+esc(x.m||"")+'</b>'+(x.h?' · đến '+esc(x.h):''); }
+      else { line2='Serial: '+esc(x.c||"(trống)")+(x.h?' · HH: <b style="color:#2e7d32">'+esc(x.h)+'</b>':''); if(x.x) line2+='<br>vnEdu còn: '+esc(x.x)+' (không đổi được)'; }
       return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #eef2f8;'+(ok?'cursor:pointer':'opacity:.75')+'">'+
-        '<input type="checkbox" data-vk="'+esc(x.k)+'" '+(on?'checked ':'')+(ok?'':'disabled ')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
+        '<input type="checkbox" data-vc="'+esc(x.k)+'" '+(on?'checked ':'')+(ok?'':'disabled ')+'style="width:20px;height:20px;margin-top:2px;flex:none">'+
         '<span style="flex:1;min-width:0"><b>'+esc(x.n)+'</b><br><span style="font-size:13px;color:#555">'+line2+'</span><br><span style="font-size:12.5px;color:'+lb[1]+'">'+esc(lb[0])+'</span></span></label>';
     }).join("")||'<div class="note info" style="margin:10px">Không có giáo viên khớp.</div>';
     h+='</div><button class="btn ok" id="vnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?'Cập nhật '+nSel+' giáo viên đã chọn':'Tích chọn giáo viên cần cập nhật')+'</button>';
     bx.innerHTML=h;
     // Giữ nguyên vị trí cuộn khi tích chọn / gõ tìm kiếm
     var sc=el("vnScroll"); sc.scrollTop=VN_SCROLL[j.id]||0; sc.onscroll=function(){ VN_SCROLL[j.id]=sc.scrollTop; };
-    // Tích/bỏ tích: chỉ cập nhật nút và số đếm, KHÔNG vẽ lại danh sách
     function updBtn(){
       var n=ds.filter(function(x){ return can(x) && sel[x.k]; }).length, b=el("vnGo"); if(!b) return;
       b.disabled=!n; b.textContent=n?"Cập nhật "+n+" giáo viên đã chọn":"Tích chọn giáo viên cần cập nhật";
     }
-    [].forEach.call(bx.querySelectorAll("[data-vk]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vk")]=c.checked; updBtn(); }; });
-    if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=true; }); [].forEach.call(bx.querySelectorAll("[data-vk]:not(:disabled)"),function(c){ var x=ds.filter(function(d){return d.k===c.getAttribute("data-vk");})[0]; if(x&&x.t==="need") c.checked=true; }); updBtn(); };
-    if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); Object.keys(sel).forEach(function(k){ sel[k]=false; }); [].forEach.call(bx.querySelectorAll("[data-vk]"),function(c){ c.checked=false; }); updBtn(); };
+    // Tích/bỏ tích giáo viên 1 serial: chỉ cập nhật nút và số đếm, KHÔNG vẽ lại danh sách
+    [].forEach.call(bx.querySelectorAll("input[data-vc]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vc")]=c.checked; updBtn(); }; });
+    // Bấm chọn serial của giáo viên nhiều serial (bấm lại serial đang chọn / "Đang dùng" = bỏ chọn)
+    [].forEach.call(bx.querySelectorAll("div[data-vz]"),function(d){ d.onclick=function(){
+      var k=d.getAttribute("data-vk"), z=d.getAttribute("data-vz"), x=ds.filter(function(i){return i.k===k;})[0], cur=x&&x.o.filter(function(o){return o.c;})[0];
+      if(sel[k]===z || (cur&&cur.z===z)) delete sel[k]; else sel[k]=z;
+      body();
+    }; });
+    if(el("vnAll")) el("vnAll").onclick=function(e){ e.preventDefault(); ds.forEach(function(x){ if(x.t==="need") sel[x.k]=mult(x)?x.o[0].z:true; }); body(); };   // chỉ giáo viên "cần cập nhật" (serial mới nhất)
+    if(el("vnNone")) el("vnNone").onclick=function(e){ e.preventDefault(); Object.keys(sel).forEach(function(k){ delete sel[k]; }); body(); };
     el("vnGo").onclick=function(){
       var keys=ds.filter(function(x){ return can(x) && sel[x.k]; }), b=el("vnGo");
       if(!keys.length){ toast("Chưa chọn giáo viên nào"); return; }
-      if(!confirm("Cập nhật serial cho "+keys.length+" giáo viên:\n- "+keys.map(function(x){return x.n+" → "+(x.a?x.a.m:(x.m||""));}).join("\n- ")+"\n\nGiáo viên khác KHÔNG bị thay đổi.")) return;
+      if(!confirm("Cập nhật serial cho "+keys.length+" giáo viên:\n- "+keys.map(function(x){return x.n+" → "+(mult(x)?pickM(x):(x.m||""));}).join("\n- ")+"\n\nGiáo viên khác KHÔNG bị thay đổi.")) return;
       b.disabled=true; b.textContent="Đang gửi…";
-      api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" giáo viên: "+keys.map(function(x){return x.n;}).join(", ")+"\n§CHON§"+JSON.stringify(keys.map(function(x){return x.k;}))})
+      // Giáo viên nhiều serial gửi kèm đúng serial đã chọn: {k:id, z:serial}; còn lại chỉ gửi id (cập nhật lên serial mới nhất)
+      api("job.update",{id:j.id, trang_thai:"await_confirm", ket_qua:"Đã chọn "+keys.length+" giáo viên: "+keys.map(function(x){return x.n;}).join(", ")+"\n§CHON§"+JSON.stringify(keys.map(function(x){ return mult(x)?{k:x.k,z:sel[x.k]}:x.k; }))})
         .then(function(){ answer(j.id,true); })
         .catch(function(e){ b.disabled=false; b.textContent="Cập nhật "+keys.length+" giáo viên đã chọn"; toast("Lỗi: "+e.message); });
     };

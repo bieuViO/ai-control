@@ -144,6 +144,12 @@ pre.res{white-space:pre-wrap;word-break:break-word;background:#F8FAFD;border:1px
 .ht-it{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;background:#fff}
 .ht-it .id{font:700 18px/1.1 ui-monospace,Consolas,monospace;color:var(--blue);letter-spacing:.5px}
 .ht-it .mt{font-size:12px;color:var(--mute)}
+.fb-tabs{display:flex;gap:6px;margin-top:10px}.fb-tabs button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font-size:13px;font-weight:700;color:var(--mute)}.fb-tabs button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.fb-it{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px;background:#fff}.fb-it .hd{display:flex;justify-content:space-between;gap:8px;font-size:13px}.fb-it .hd b{color:var(--blue)}
+.fb-it textarea{width:100%;box-sizing:border-box;min-height:190px;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:10px;font:14px/1.45 inherit;resize:vertical}
+.fb-it .bt{display:flex;gap:8px}.fb-it .bt .btn{margin-top:10px;padding:12px;font-size:15px}
+.fb-tag{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--blue-soft);color:var(--blue);white-space:nowrap}.fb-tag.ok{background:#E3F5E9;color:#1B6B3A}.fb-tag.no{background:var(--err-bg);color:var(--err)}
+.fb-nd{white-space:pre-wrap;font-size:13px;margin-top:8px;max-height:120px;overflow:hidden;color:#334}
 .ht-it .b1{margin-left:auto;border:0;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
 .ht-it .b2{border:0;background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 11px;font-weight:700}
 @media (prefers-reduced-motion:reduce){.node,.hub::before,.spoke.act,.node.busy::after,.node.wait::after{animation:none}}
@@ -220,10 +226,7 @@ var IC = {
   mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
   calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   video:'<rect x="3" y="6" width="12" height="12" rx="2"/><path d="M15 10l6-3v10l-6-3z"/>',
-  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
-  sale:'<path d="M4 5h16v11H10l-4 4v-4H4z"/><path d="M12 7.5l.9 2.2 2.1.8-2.1.8-.9 2.2-.9-2.2-2.1-.8 2.1-.8z"/>',   /* AI Bán Hàng */
-  call:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
-  chat:'<path d="M4 5h16v11H10l-4 4v-4H4z"/>'
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
 };
 function svg(n){ return '<svg viewBox="0 0 24 24">'+(IC[n]||IC.chip)+'</svg>'; }
 
@@ -310,13 +313,14 @@ var TOOLS = [
    fields:[]},
   {id:"vnedu_sync", parent:"vnedu_admin", short:"Sync vnEdu", name:"VNEDU Sync Analyzer", sub:"Phân tích lịch sử đồng bộ", icon:"chart", ready:false},
   {id:"hoadon_pdf", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
-  {id:"invoice_kh", short:"DL khách", name:"Dữ liệu KH Invoice", sub:"Xuất email, tên, MST khách", icon:"users", ready:false},
+  /* Báo cáo (đổi tên từ "DL khách" 31/10/2026): nút nhóm, bên trong có Doanh thu + Công nợ theo tháng. Chưa nối dữ liệu → ready:false. */
+  {id:"invoice_kh", group:true, short:"Báo cáo", name:"Báo cáo", sub:"Doanh thu, công nợ theo tháng", icon:"chart", ready:true},
+  {id:"bc_doanh_thu", parent:"invoice_kh", doanhthu:true, short:"Doanh thu", name:"Doanh thu", sub:"Doanh thu từng khách hàng, theo tháng", icon:"chart", ready:true, risk:"R0"},
+  {id:"bc_cong_no", parent:"invoice_kh", short:"Công nợ theo tháng", name:"Công nợ theo tháng", sub:"Tổng nợ còn lại theo từng tháng", icon:"chart", ready:false},
   {id:"trinh_ky", parent:"hop_dong_web", short:"Trình ký", name:"Chuyển trình hàng loạt", sub:"Chuyển trình và tải PDF hợp đồng", icon:"send", ready:false},
   {id:"ca_plugin", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},
-  /* AI Bán Hàng (sales.js): thay chỗ nút HĐ Word trên vòng ngoài. Đọc/ghi Sheet "AI Bán Hàng – VNPT Chơn Thành" qua backend (action sheet.*). */
-  {id:"ai_ban_hang", short:"AI Bán Hàng", name:"AI Bán Hàng", sub:"Khách từ Fanpage, khách nóng cần gọi, việc cần làm", icon:"sale", ready:true, risk:"R0", sales:true},
-  /* HĐ Word: chuyển vào trong nút Hợp đồng (chưa nối, giữ lại để làm sau) */
-  {id:"hd_word", parent:"hop_dong_web", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false},
+  /* Auto FB (thay HĐ Word 30/10/2026): duyệt + đăng bài Fanpage VNPT CHƠN THÀNH. Backend: AutoFB.gs (fb.list / fb.set / fb.post / fb.new) + Make B2 đăng bài. */
+  {id:"auto_fb", autofb:true, short:"Auto FB", name:"Auto FB – Fanpage VNPT", sub:"Duyệt, đăng bài Fanpage VNPT CHƠN THÀNH", icon:"share", ready:true, risk:"R1"},
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
   /* My Tool: sẽ liên kết sau (đổi ready:true khi nối). Vòng ngoài hiện 9 nút, không vẽ đường nối, chấm xanh = đã kết nối. */
   {id:"my_tool", short:"My Tool", name:"My Tool", sub:"Sắp liên kết", icon:"chip", ready:false},
@@ -406,8 +410,6 @@ var LAY={"in":[],"out":[],rIn:0,rOut:0}, dragNode=null, suppressUntil=0, G=null;
 function loadLay(){
   var l=null; try{ l=JSON.parse(lsGet("aic_lay")||"null"); }catch(e){}
   l=l||{}; LAY={"in":l["in"]||[],"out":l.out||[],rIn:+l.rIn||0,rOut:+l.rOut||0};
-  // aic-v48: AI Bán Hàng nằm đúng chỗ cũ của HĐ Word (HĐ Word đã chuyển vào trong nút Hợp đồng)
-  if(LAY.out.indexOf("ai_ban_hang")<0) LAY.out=LAY.out.map(function(id){ return id==="hd_word"?"ai_ban_hang":id; });
   // Vòng trong CỐ ĐỊNH 5 nút (INNER_FIX). Mọi tool khác (kể cả tool mới) luôn nằm vòng ngoài.
   var rd=TOOLS.filter(function(t){return INNER_FIX.indexOf(t.id)>=0 && !t.parent && !t.hidden;}).map(function(t){return t.id;});
   var sn=TOOLS.filter(function(t){return INNER_FIX.indexOf(t.id)<0 && !t.parent && !t.hidden;}).map(function(t){return t.id;});
@@ -653,10 +655,11 @@ function openTool(t, prefill, missing){
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
-  if(t.sales){ if(typeof openSales==="function") openSales(); else toast("Chưa tải được sales.js, hãy tải lại trang"); return; }   // AI Bán Hàng (sales.js)
   if(!t.ready){ openSoon(t); return; }
   if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
   if(t.support){ openSupport(); return; }
+  if(t.autofb){ openAutoFB(); return; }
+  if(t.doanhthu){ if(typeof openDoanhThu==="function") openDoanhThu(); else toast("Chưa tải được doanhthu.js, hãy tải lại trang"); return; }   // màn Doanh thu (doanhthu.js)
   if(!prefill && TOOLS.some(function(c){return c.parent===t.id;})){ openGroup(t); return; }
   if(t.link){ toast("Đang mở “"+t.name+"”…"); var a=document.createElement("a"); a.href=t.link; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove(); return; }   /* luôn mở TAB MỚI, không đè lên AI Control (window.open + noopener luôn trả null nên bản cũ rơi vào location.href) */
   var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">'+esc(t.desc)+'</p><form id="tf" autocomplete="off">';
@@ -774,6 +777,8 @@ function renderJobSheet(first){
   var j=JOBS.filter(function(x){return x.id===openJobId;})[0]; if(!j){ return; }
   // vnEdu Serial đang hiện bảng chọn và dữ liệu không đổi → KHÔNG vẽ lại (vẽ lại làm mất ô tìm kiếm/bàn phím và vị trí cuộn)
   if(!first && j.tool==="vnedu_serial" && j.trang_thai==="await_confirm" && VN_REND===j.id+"|"+String(j.ket_qua||"").length && el("vnQ")) return;
+  // Nhắc nợ đang hiện bảng tick khách và dữ liệu không đổi → KHÔNG vẽ lại (vẽ lại 4 giây/lần làm mất ô tìm kiếm, ô email và bàn phím)
+  if(!first && j.tool==="nhac_no" && j.trang_thai==="await_confirm" && NN_REND===j.id+"|"+String(j.ket_qua||"").length && el("nnQ")) return;
   var t=toolById(j.tool)||{name:j.tool,icon:"chip"};
   var st=j.trang_thai, idx=st==="confirmed"?2:FLOW.indexOf(st);
   var bar='<div class="steps">'+FLOW.map(function(s,i){
@@ -961,7 +966,7 @@ function vnSelRender(j){
 /* ---------- Nhắc nợ: bảng tick chọn khách cần gửi mail ----------
    Danh sách từ máy tính (dòng §DS§). Mặc định KHÔNG tích ai. Bấm Gửi mail → ghi §CHON§[khóa…] rồi xác nhận;
    máy tính chỉ gửi đúng những khách này. */
-var NN_DS={}, NN_SEL={}, NN_EM={}, NN_Q="", NN_SCROLL={}, NN_QF=false, NN_FK=null, NN_FP=0;   // NN_FK: ô email đang gõ (giữ con trỏ khi màn hình tự làm mới)
+var NN_REND="", NN_DS={}, NN_SEL={}, NN_EM={}, NN_Q="", NN_SCROLL={}, NN_QF=false, NN_FK=null, NN_FP=0;   // NN_FK: ô email đang gõ (giữ con trỏ khi màn hình tự làm mới)
 function nnSelRender(j){
   var box=el("nnList"); if(!box) return;
   var ds=NN_DS[j.id];
@@ -982,8 +987,8 @@ function nnSelRender(j){
   var verb=re?"Gửi lại":"Gửi mail";
   var q=vnNorm(NN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n+" "+x.e).indexOf(q)>=0; });
   var nSel=ds.filter(function(x){return sel[x.k];}).length;
-  var h='<div class="fld" style="margin-top:8px"><input id="nnQ" type="text" placeholder="Tìm khách (gõ không dấu được)…" value="'+esc(NN_Q)+'"></div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
+  var qHtml='<div class="fld" style="margin-top:8px"><input id="nnQ" type="text" placeholder="Tìm khách (gõ không dấu được)…" value="'+esc(NN_Q)+'"></div>';
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
     '<span>Hiển thị '+shown.length+'/'+ds.length+'</span>'+
     '<span><a href="#" id="nnAll" style="margin-right:10px">Chọn hết</a><a href="#" id="nnNone">Bỏ chọn</a></span></div>'+
     '<div id="nnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
@@ -996,12 +1001,14 @@ function nnSelRender(j){
       '<span style="font-size:12.5px;color:#1565c0">'+fmtMoney(Math.round(+x.tien||0))+' đ · '+x.hd+' HĐ'+(x.pdf?'':' · <span style="color:#e65100">'+(x.cloud?'chưa có PDF trên Google':'chưa tải PDF (máy tự tải)')+'</span>')+'</span></span></label>';
   }).join("")||'<div class="note info" style="margin:10px">Không có khách khớp.</div>';
   h+='</div><button class="btn ok" id="nnGo" '+(nSel?'':'disabled ')+'style="margin-top:10px">'+(nSel?verb+' cho '+nSel+' khách đã chọn':'Tích chọn khách cần gửi')+'</button>';
-  box.innerHTML=h;
-  var sc=el("nnScroll"); sc.scrollTop=NN_SCROLL[j.id]||0; sc.onscroll=function(){ NN_SCROLL[j.id]=sc.scrollTop; };
   var qi=el("nnQ");
-  if(NN_QF){ qi.focus(); try{ qi.setSelectionRange(qi.value.length,qi.value.length); }catch(e){} }
-  qi.onfocus=function(){ NN_QF=true; }; qi.onblur=function(){ NN_QF=false; };
-  qi.oninput=function(){ NN_Q=qi.value; NN_SCROLL[j.id]=0; nnSelRender(j); };
+  if(qi && box.getAttribute("data-nnj")===j.id){ el("nnBody").innerHTML=h; }          // đã có ô tìm kiếm: chỉ thay phần danh sách, KHÔNG đụng ô đang gõ
+  else{
+    box.innerHTML=qHtml+'<div id="nnBody">'+h+'</div>'; box.setAttribute("data-nnj",j.id); qi=el("nnQ");
+    qi.oninput=function(){ NN_Q=qi.value; NN_SCROLL[j.id]=0; nnSelRender(j); };
+  }
+  var sc=el("nnScroll"); sc.scrollTop=NN_SCROLL[j.id]||0; sc.onscroll=function(){ NN_SCROLL[j.id]=sc.scrollTop; };
+  NN_REND=j.id+"|"+String(j.ket_qua||"").length;
   function updBtn(){
     var n=ds.filter(function(x){ return sel[x.k]; }).length, b=el("nnGo"); if(!b) return;
     b.disabled=!n; b.textContent=n?verb+" cho "+n+" khách đã chọn":"Tích chọn khách cần gửi";
@@ -1192,6 +1199,103 @@ function openSupport(){
   supPrefetch(); clearInterval(supTimer); supLoad(); if(connected()) supTimer=setInterval(supLoad,5000);
 }
 
+/* =====================================================================
+   AUTO FB: duyệt + đăng bài Fanpage VNPT CHƠN THÀNH (30/10/2026)
+   Backend AutoFB.gs: fb.list (đọc) · fb.set (Duyệt/Bỏ, kèm nội dung đã sửa) · fb.post (đăng các bài đã Duyệt) · fb.new (AI viết bài mới)
+   Chỉ bài anh bấm "Duyệt & đăng" mới lên Fanpage.
+   ===================================================================== */
+var FB={items:[], url:"", tab:"cho", busy:false};
+function fbTag(tt){ var c=tt==="Đã đăng"?"ok":(tt==="Bỏ"||tt==="Lỗi"?"no":""); return '<span class="fb-tag '+c+'">'+esc(tt||"?")+'</span>'; }
+function fbRender(){
+  var box=el("fbList"); if(!box) return;
+  [].forEach.call(document.querySelectorAll(".fb-tabs button"),function(b){ b.classList.toggle("on", b.getAttribute("data-tab")===FB.tab); });
+  var list=FB.items.filter(function(x){
+    if(FB.tab==="cho") return x.tt==="Chờ duyệt"||x.tt==="Duyệt"||x.tt==="Lỗi";
+    if(FB.tab==="da") return x.tt==="Đã đăng";
+    return true; });
+  if(!list.length){ box.innerHTML='<p class="sub" style="margin-top:14px">'+(FB.tab==="cho"?"Không có bài nào chờ duyệt. Bấm “AI viết bài mới” hoặc chờ 7h sáng mai.":(FB.tab==="da"?"Chưa có bài nào đã đăng.":"Chưa có bài nào."))+'</p>'; return; }
+  box.innerHTML=list.map(function(x){
+    var h='<div class="fb-it"><div class="hd"><span><b>'+esc(x.sp)+'</b><br><span class="sub">'+esc(x.ngay)+(x.anh?" · có ảnh":" · chỉ chữ")+'</span></span>'+fbTag(x.tt)+'</div>';
+    if(x.tt==="Chờ duyệt"||x.tt==="Lỗi"){
+      h+='<textarea data-nd="'+x.row+'">'+esc(x.nd)+'</textarea>'+
+        '<div class="bt"><button class="btn" data-ok="'+x.row+'">Duyệt & đăng</button><button class="btn danger" data-skip="'+x.row+'" style="flex:0 0 30%">Bỏ</button></div>';
+    } else if(x.tt==="Duyệt"){
+      h+='<div class="fb-nd">'+esc(x.nd)+'</div><div class="note info">Đang chờ Make đăng… Nếu quá 2 phút chưa lên, bấm “Đăng lại”.</div>'+
+        '<div class="bt"><button class="btn sec" data-repost="1">Đăng lại</button><button class="btn danger" data-undo="'+x.row+'" style="flex:0 0 35%">Hủy duyệt</button></div>';
+    } else {
+      h+='<div class="fb-nd">'+esc(x.nd)+'</div>';
+      if(x.link) h+='<div class="bt"><a class="btn" style="text-align:center;text-decoration:none" href="'+esc(x.link)+'" target="_blank" rel="noopener">Mở bài</a><button class="btn sec" data-share="'+esc(x.link)+'" style="margin-top:10px">Chia sẻ</button></div>'+
+        '<div class="sub">Mở bài trên app Facebook → bấm Chia sẻ → “Chia sẻ lên trang cá nhân”.</div>';
+      if(x.ghi) h+='<div class="sub">'+esc(x.ghi)+'</div>';
+    }
+    return h+'</div>';
+  }).join("");
+}
+function fbLoad(quiet){
+  if(!connected()){ var b=el("fbList"); if(b) b.innerHTML='<div class="note info">Chưa kết nối backend. Vào Cài đặt để kết nối.</div>'; return Promise.resolve(); }
+  if(!quiet){ var b2=el("fbList"); if(b2) b2.innerHTML='<p class="sub" style="margin-top:14px">Đang tải bài viết…</p>'; }
+  return api("fb.list",{limit:30}).then(function(r){ FB.items=r.items||[]; FB.url=r.url||""; fbRender(); })
+    .catch(function(e){ var b=el("fbList"); if(b) b.innerHTML='<div class="note err">Chưa tải được: '+esc(e.message)+'. Nếu vừa cập nhật, cần dán AutoFB.gs vào Apps Script và triển khai phiên bản mới.</div>'; });
+}
+/* sau khi duyệt: hỏi lại 15 lần × 4 giây xem Make đã đăng chưa */
+function fbWatch(row){
+  var n=0;
+  (function poll(){
+    if(!el("fbList")) return;
+    api("fb.list",{limit:30}).then(function(r){
+      FB.items=r.items||[]; fbRender();
+      var x=FB.items.filter(function(i){ return i.row===row; })[0];
+      if(x && x.tt==="Đã đăng"){ toast("Đã đăng lên Fanpage ✓"); FB.tab="da"; fbRender(); return; }
+      if(++n<15) setTimeout(poll,4000); else toast("Make chưa báo đăng xong, kiểm tra lại sau");
+    }).catch(function(){ if(++n<15) setTimeout(poll,4000); });
+  })();
+}
+function fbAct(fn){ if(FB.busy) return; FB.busy=true; fn().then(function(){ FB.busy=false; },function(e){ FB.busy=false; toast("Lỗi: "+e.message); }); }
+function openAutoFB(){
+  var h='<div class="sh-h"><span class="ic">'+svg("share")+'</span><div><b>Auto FB – Fanpage VNPT</b></div></div>'+
+    '<p class="sh-d">7h sáng mỗi ngày AI tự viết 1 bài. Anh đọc, sửa nếu cần, bấm “Duyệt & đăng” là bài lên Fanpage VNPT CHƠN THÀNH.</p>'+
+    '<div class="bt" style="display:flex;gap:8px"><button class="btn" id="fbNew" style="margin-top:6px">AI viết bài mới</button><button class="btn sec" id="fbSheet" style="margin-top:6px;flex:0 0 38%">Mở Sheet</button></div>'+
+    '<div class="fb-tabs"><button data-tab="cho">Chờ duyệt</button><button data-tab="da">Đã đăng</button><button data-tab="all">Tất cả</button></div>'+
+    '<div id="fbList"></div>'+
+    '<button class="btn sec" id="fbClose">Đóng</button>';
+  openSheet(h); FB.tab="cho";
+  el("fbClose").onclick=closeSheet;
+  el("fbSheet").onclick=function(){ var a=document.createElement("a"); a.href=FB.url||"https://docs.google.com/spreadsheets/d/1e9p7MKuBXMilRIAirTMlnugscSzCjioJwZq3YSQLWYE/edit"; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove(); };
+  [].forEach.call(document.querySelectorAll(".fb-tabs button"),function(b){ b.onclick=function(){ FB.tab=b.getAttribute("data-tab"); fbRender(); }; });
+  el("fbNew").onclick=function(){
+    if(!connected()){ toast("Chưa kết nối backend"); return; }
+    var b=el("fbNew"); fbAct(function(){
+      b.disabled=true; b.textContent="AI đang viết… (10–20 giây)";
+      return api("fb.new",{}).then(function(r){ b.disabled=false; b.textContent="AI viết bài mới"; toast("Đã có bài mới: "+((r.item||{}).sp||"")); FB.tab="cho"; return fbLoad(true); },
+        function(e){ b.disabled=false; b.textContent="AI viết bài mới"; throw e; });
+    });
+  };
+  el("fbList").onclick=function(e){
+    var ok=e.target.closest("[data-ok]"), sk=e.target.closest("[data-skip]"), rp=e.target.closest("[data-repost]"), un=e.target.closest("[data-undo]"), sh=e.target.closest("[data-share]");
+    if(ok){
+      var row=+ok.getAttribute("data-ok"), ta=document.querySelector('textarea[data-nd="'+row+'"]'), nd=ta?ta.value.trim():"";
+      if(!nd){ toast("Nội dung bài đang trống"); return; }
+      if(!confirm("Đăng bài này CÔNG KHAI lên Fanpage VNPT CHƠN THÀNH?")) return;
+      ok.disabled=true; ok.textContent="Đang gửi…";
+      fbAct(function(){ return api("fb.set",{row:row, tt:"Duyệt", nd:nd}).then(function(r){ toast(r.fired?"Đã duyệt, Make đang đăng bài…":"Đã duyệt nhưng chưa gọi được Make"); return fbLoad(true).then(function(){ fbWatch(row); }); },
+        function(er){ ok.disabled=false; ok.textContent="Duyệt & đăng"; throw er; }); });
+    } else if(sk){
+      var r2=+sk.getAttribute("data-skip"); if(!confirm("Bỏ bài này (không đăng)?")) return;
+      fbAct(function(){ return api("fb.set",{row:r2, tt:"Bỏ"}).then(function(){ toast("Đã bỏ bài"); return fbLoad(true); }); });
+    } else if(un){
+      var r3=+un.getAttribute("data-undo");
+      fbAct(function(){ return api("fb.set",{row:r3, tt:"Chờ duyệt"}).then(function(){ toast("Đã đưa về Chờ duyệt"); return fbLoad(true); }); });
+    } else if(rp){
+      fbAct(function(){ return api("fb.post",{}).then(function(r){ toast(r.fired?("Đã gọi Make đăng "+r.fired+" bài"):"Không có bài nào đang Duyệt"); return fbLoad(true); }); });
+    } else if(sh){
+      var u=sh.getAttribute("data-share");
+      if(navigator.share) navigator.share({url:u, title:"VNPT Chơn Thành"}).catch(function(){});
+      else copyText(u).then(function(){ toast("Đã sao chép link bài"); }).catch(function(){ toast(u); });
+    }
+  };
+  fbLoad();
+}
+
 /* ---------- thanh nhập lệnh: ẩn mặc định, bấm nút AI Control để hiện ---------- */
 function toggleCmd(force){
   var d=document.querySelector(".dock"), open=(typeof force==="boolean")?force:!d.classList.contains("open");
@@ -1228,6 +1332,6 @@ document.addEventListener("visibilitychange",function(){ if(!document.hidden){ p
 </script>
 <script src="explorer.js"></script>
 <script src="sheets.js"></script>
-<script src="sales.js"></script>
+<script src="doanhthu.js"></script>
 </body>
 </html>

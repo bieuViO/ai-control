@@ -315,7 +315,7 @@ var TOOLS = [
    desc:"Máy tính mở trang đăng nhập vnEdu. Anh nhập tài khoản admin trường cần làm, tool tự quét serial giáo viên rồi báo về đây. Chỉ ghi lên vnEdu sau khi anh bấm Xác nhận.",
    fields:[]},
   {id:"vnedu_sync", parent:"vnedu_admin", short:"Sync vnEdu", name:"VNEDU Sync Analyzer", sub:"Phân tích lịch sử đồng bộ", icon:"chart", ready:false},
-  {id:"hoadon_pdf", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
+  {id:"hoadon_pdf", parent:"my_tool", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
   /* Báo cáo (đổi tên từ "DL khách" 31/10/2026): nút nhóm, bên trong có Doanh thu + Công nợ theo tháng. Chưa nối dữ liệu → ready:false. */
   {id:"invoice_kh", group:true, short:"Báo cáo", name:"Báo cáo", sub:"Doanh thu, công nợ theo tháng", icon:"chart", ready:true},
   {id:"bc_doanh_thu", parent:"invoice_kh", doanhthu:true, short:"Doanh thu", name:"Doanh thu", sub:"Doanh thu từng khách hàng, theo tháng", icon:"chart", ready:true, risk:"R0"},
@@ -330,7 +330,7 @@ var TOOLS = [
   {id:"hd_word", parent:"hop_dong_web", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false},
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
   /* My Tool: sẽ liên kết sau (đổi ready:true khi nối). Vòng ngoài hiện 9 nút, không vẽ đường nối, chấm xanh = đã kết nối. */
-  {id:"my_tool", short:"My Tool", name:"My Tool", sub:"Sắp liên kết", icon:"chip", ready:false},
+  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Công cụ cá nhân: PDF hóa đơn", icon:"chip", ready:true},
   {id:"my_google", short:"My Google", name:"My Google", sub:"Mở nhanh Drive, Gmail, Lịch, Sheet, Docs, Meet", icon:"globe", ready:true, ring:"out", risk:"R0",
    links:[
     {t:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app", icon:"users", act:"khach"},   /* mở sheets.js, không rời app */

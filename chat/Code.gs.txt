@@ -92,13 +92,13 @@ function checkLimits_(sid) {
 /* ---------- Gemini ---------- */
 function getSystemPrompt_() {
   var cache = CacheService.getScriptCache();
-  var p = cache.get('sys_prompt');
+  var p = cache.get('sys_prompt2');
   if (p) return p;
   var sh = ss_().getSheetByName(CFG.TAB_CONFIG);
   p = String(sh.getRange(CFG.PROMPT_CELL).getValue() || '');
   if (p.length < 200) throw new Error('SYSTEM_PROMPT rỗng');
   p += CFG.EXTRA_RULES;
-  cache.put('sys_prompt', p.slice(0, 95000), 300);
+  cache.put('sys_prompt2', p.slice(0, 95000), 300);
   return p;
 }
 

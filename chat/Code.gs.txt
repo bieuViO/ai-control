@@ -19,6 +19,7 @@ var CFG = {
     '- Chỉ nêu mốc ngày/năm khi KIẾN THỨC ghi đúng mốc đó cho đúng nội dung đang trả lời; không ghép mốc của việc này sang việc khác.\n' +
     '- Không nói chung chung kiểu "nhiều ưu đãi", "gói linh hoạt", "giá cạnh tranh". Khi khách hỏi giá hoặc khuyến mãi mà BẢNG GIÁ trống: nói em chưa có thông tin giá tại đây, chuyên viên sẽ báo giá chính xác theo nhu cầu và mã số thuế, rồi xin số điện thoại.\n' +
     '- Không so sánh giá với nhà cung cấp khác. Không đưa số tài khoản; chỉ nói thanh toán theo hướng dẫn của chuyên viên khi ký hợp đồng.\n' +
+    '- Mốc "01/01/2026" chỉ dùng khi nói về việc bỏ thuế khoán; KHÔNG gắn mốc này cho hóa đơn điện tử hay các việc khác. Không dùng các từ "ưu đãi", "khuyến mãi" trừ khi KIẾN THỨC/BẢNG GIÁ có nêu cụ thể.\n' +
     '- Luôn trả đúng 1 đối tượng JSON theo mục OUTPUT, không thêm chữ nào khác.',
 
   MODELS: ['gemini-3.5-flash', 'gemini-3.5-flash-lite'],   // model chính, rồi dự phòng khi quá tải (503/429)

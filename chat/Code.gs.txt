@@ -14,6 +14,13 @@ var SHEET_ID = '1dp-par2cKJUDzeVORHaNCgQRwcV2GGUe7uI47BFX1HI'; // Sheet "AI Bán
 function ss_() { return SpreadsheetApp.openById(SHEET_ID); }
 
 var CFG = {
+  // Quy tắc bổ sung cho kênh web (ghép sau SYSTEM_PROMPT trong BotConfig!B5, ưu tiên cao nhất)
+  EXTRA_RULES: '\n\nQUY TẮC BỔ SUNG (ưu tiên cao nhất):\n' +
+    '- Chỉ nêu mốc ngày/năm khi KIẾN THỨC ghi đúng mốc đó cho đúng nội dung đang trả lời; không ghép mốc của việc này sang việc khác.\n' +
+    '- Không nói chung chung kiểu "nhiều ưu đãi", "gói linh hoạt", "giá cạnh tranh". Khi khách hỏi giá hoặc khuyến mãi mà BẢNG GIÁ trống: nói em chưa có thông tin giá tại đây, chuyên viên sẽ báo giá chính xác theo nhu cầu và mã số thuế, rồi xin số điện thoại.\n' +
+    '- Không so sánh giá với nhà cung cấp khác. Không đưa số tài khoản; chỉ nói thanh toán theo hướng dẫn của chuyên viên khi ký hợp đồng.\n' +
+    '- Luôn trả đúng 1 đối tượng JSON theo mục OUTPUT, không thêm chữ nào khác.',
+
   MODELS: ['gemini-3.5-flash', 'gemini-3.5-flash-lite'],   // model chính, rồi dự phòng khi quá tải (503/429)
   TZ: 'Asia/Ho_Chi_Minh',
   TAB_CONFIG: 'BotConfig',
@@ -90,6 +97,7 @@ function getSystemPrompt_() {
   var sh = ss_().getSheetByName(CFG.TAB_CONFIG);
   p = String(sh.getRange(CFG.PROMPT_CELL).getValue() || '');
   if (p.length < 200) throw new Error('SYSTEM_PROMPT rỗng');
+  p += CFG.EXTRA_RULES;
   cache.put('sys_prompt', p.slice(0, 95000), 300);
   return p;
 }
@@ -124,8 +132,11 @@ function callGemini_(msg, history) {
   if (!res) throw new Error('Gemini ' + lastErr);
   var data = JSON.parse(res.getContentText());
   var txt = (((data.candidates || [])[0] || {}).content || {}).parts;
+  var fin = (((data.candidates || [])[0] || {}).finishReason) || '';
   txt = txt && txt[0] && txt[0].text || '';
-  return parseAi_(txt);
+  var out = parseAi_(txt);
+  if (out.bad) console.warn('Gemini JSON lỗi (finishReason=' + fin + '): ' + String(txt).slice(0, 400));
+  return out;
 }
 
 /** Chuẩn hóa đầu ra của AI (hàm thuần, dễ test). */
@@ -134,7 +145,7 @@ function parseAi_(txt) {
   var o;
   try { o = JSON.parse(txt); } catch (e) { o = null; }
   if (!o || typeof o.reply !== 'string' || !o.reply.trim()) {
-    return { reply: 'Dạ em đã ghi nhận. Chuyên viên VNPT sẽ hỗ trợ anh/chị, hoặc anh/chị gọi hotline 0918 203 603 ạ.', lead: emptyLead_(), muc_do: 'Lạnh', chuyen_nguoi: true };
+    return { reply: 'Dạ em đã ghi nhận. Chuyên viên VNPT sẽ hỗ trợ anh/chị, hoặc anh/chị gọi hotline 0918 203 603 ạ.', lead: emptyLead_(), muc_do: 'Lạnh', chuyen_nguoi: true, bad: true };
   }
   var L = o.lead && typeof o.lead === 'object' ? o.lead : {};
   var lead = emptyLead_();

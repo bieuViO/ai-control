@@ -14,7 +14,7 @@ var SHEET_ID = '1dp-par2cKJUDzeVORHaNCgQRwcV2GGUe7uI47BFX1HI'; // Sheet "AI Bán
 function ss_() { return SpreadsheetApp.openById(SHEET_ID); }
 
 var CFG = {
-  MODEL: 'gemini-2.5-flash',
+  MODELS: ['gemini-3.5-flash', 'gemini-3.5-flash-lite'],   // model chính, rồi dự phòng khi quá tải (503/429)
   TZ: 'Asia/Ho_Chi_Minh',
   TAB_CONFIG: 'BotConfig',
   PROMPT_CELL: 'B5',
@@ -103,19 +103,25 @@ function callGemini_(msg, history) {
     contents: [{ role: 'user', parts: [{ text: userText }] }],
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 700,
-      responseMimeType: 'application/json',
-      thinkingConfig: { thinkingBudget: 0 }
+      maxOutputTokens: 1500,
+      responseMimeType: 'application/json'
     }
   };
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + CFG.MODEL + ':generateContent', {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { 'x-goog-api-key': key },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  });
-  if (res.getResponseCode() !== 200) throw new Error('Gemini ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200));
+  var res = null, lastErr = '';
+  for (var i = 0; i < CFG.MODELS.length; i++) {
+    res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + CFG.MODELS[i] + ':generateContent', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'x-goog-api-key': key },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() === 200) break;
+    lastErr = CFG.MODELS[i] + ' ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200);
+    console.warn('Gemini thử model kế tiếp – ' + lastErr);
+    res = null;
+  }
+  if (!res) throw new Error('Gemini ' + lastErr);
   var data = JSON.parse(res.getContentText());
   var txt = (((data.candidates || [])[0] || {}).content || {}).parts;
   txt = txt && txt[0] && txt[0].text || '';

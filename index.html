@@ -1091,16 +1091,35 @@ function pingNow(){
   }).catch(function(){ setChip("dBack","tBack","warn","Mất kết nối"); return false; });
 }
 
+/* ---------- tra công nợ 1 khách (gõ tên/MST vào ô lệnh) – route cn.tra, đọc tab CONG_NO ---------- */
+function cnTra(q){
+  el("cmdHint").textContent="Đang tra công nợ…";
+  api("cn.tra",{q:q}).then(function(r){
+    el("cmdHint").textContent="Chạm để mở · kéo để xoay vòng · giữ rồi kéo để đổi chỗ";
+    var L=r.ket_qua||[];
+    if(!L.length){ toast("Chưa hiểu lệnh, anh chọn công cụ bên dưới"); return; }
+    el("cmdInput").value=""; toggleCmd(false);
+    var h='<div class="sh-h"><span class="ic">'+svg("wallet")+'</span><div><b>Công nợ</b></div></div><p class="sh-d">Tra theo: “'+esc(q)+'”</p>';
+    L.forEach(function(g){
+      h+='<div class="note '+(g.tong>0?'warn':'info')+'"><b>'+esc(g.ten)+'</b>'+(g.mst?'<br><small>MST '+esc(g.mst)+'</small>':'')+'<br>'+
+        (g.tong>0 ? 'Còn nợ: <b>'+fmtMoney(g.tong)+' đ</b>'+g.items.map(function(i){ return '<br><small>'+esc(i.ky)+': '+fmtMoney(i.tien)+' đ</small>'; }).join("")
+                  : 'Không còn nợ'+(g.da_gach?' <small>('+g.da_gach+' khoản đã gạch nợ)</small>':'')) + '</div>';
+    });
+    h+='<button class="btn sec" id="btnCloseCn">Đóng</button>';
+    openSheet(h); el("btnCloseCn").onclick=closeSheet;
+  }).catch(function(err){ el("cmdHint").textContent="Không tra được: "+err.message; });
+}
 /* ---------- ô lệnh tự do + giọng nói ---------- */
 el("cmdForm").onsubmit=function(e){
   e.preventDefault();
   var v=el("cmdInput").value.trim(); if(!v) return;
   if(!connected()){ toast("Cần kết nối backend (Cài đặt) để dịch lệnh"); return; }
+  if(/^[\d\s\-]{9,}$/.test(v)){ cnTra(v); return; }   // chỉ gõ MST → tra công nợ ngay, khỏi qua Gemini
   el("cmdHint").textContent="Đang dịch lệnh…";
   api("ai.parse",{text:v}).then(function(r){
     var p=r.parsed||{}, t=toolById(p.tool);
     el("cmdHint").textContent="Chạm để mở · kéo để xoay vòng · giữ rồi kéo để đổi chỗ";
-    if(!t){ toast("Chưa hiểu lệnh, anh chọn công cụ bên dưới"); return; }
+    if(!t){ cnTra(v); return; }   // không phải lệnh tool → thử tra công nợ theo tên/MST
     var pre=Object.assign({},p.params||{});
     if(t.id==="hop_dong_web" && pre.dich_vu){ var m=String(pre.dich_vu).match(/^BHXH VAN (\S+) - (\d+) tháng$/); if(m){ pre.nhom_dv="BHXH VAN"; pre.van_goi=m[1]; pre.van_thang=m[2]; } else pre.nhom_dv=pre.dich_vu; }
     el("cmdInput").value=""; toggleCmd(false); openTool(t, pre, p.thieu||[]);

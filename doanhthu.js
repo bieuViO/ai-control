@@ -77,9 +77,10 @@
       var kk = yy + "-" + z(mm + 1);
       if (ks.indexOf(kk) < 0) ks.push(kk);
     }
-    if (D.ky && ks.indexOf(D.ky) < 0) ks.push(D.ky);
+    if (D.ky && D.ky !== "ALL" && ks.indexOf(D.ky) < 0) ks.push(D.ky);
     ks.sort().reverse();
-    s.innerHTML = ks.map(function (k) {
+    var allSum = D.thang.reduce(function (s0, x) { return s0 + x.tong; }, 0);
+    s.innerHTML = '<option value="ALL"' + (D.ky === "ALL" ? " selected" : "") + ">Tất cả các tháng · " + D.thang.length + " tháng · " + money(allSum) + " đ</option>" + ks.map(function (k) {
       var t = D.thang.filter(function (x) { return x.ky === k; })[0];
       return '<option value="' + k + '"' + (k === D.ky ? " selected" : "") + ">Tháng " + kyVN(k) + (t ? " · " + money(t.tong) + " đ" : " · chưa lấy") + "</option>";
     }).join("");
@@ -87,11 +88,11 @@
 
   function load(ky) {
     if (!connected()) { setMsg("Chưa kết nối backend", true); return Promise.resolve(); }
-    return api("dt.get", { ky: ky || "" }).then(function (r) {
+    return api("dt.get", { ky: ky === "ALL" ? "" : (ky || "") }).then(function (r) {
       D.thang = r.thang || []; D.rows = r.rows || []; D.cap = r.cap_nhat || "";
       D.ky = ky || r.ky || curKy(); D.loaded = true;
       if (!ky && !D.rows.length) D.ky = curKy();
-      renderMonths(); renderList();
+      renderMonths(); if (D.ky === "ALL") renderAll(); else renderList();
     }, function (e) { setMsg("Không tải được: " + e.message, true); });
   }
 
@@ -114,8 +115,60 @@
     if (!connected()) { toast("Chưa kết nối backend"); return; }
     if (D.busy) return;
     D.busy = true; el("dtGet").disabled = true; setMsg("Đang gửi lệnh cho máy tính…");
-    api("job.enqueue", { tool: "doanh_thu", params: { ky: D.ky || curKy() } }).then(function (r) { watch(r.id, Date.now()); },
+    api("job.enqueue", { tool: "doanh_thu", params: { ky: (D.ky && D.ky !== "ALL") ? D.ky : curKy() } }).then(function (r) { watch(r.id, Date.now()); },
       function (e) { D.busy = false; el("dtGet").disabled = false; setMsg("Lỗi: " + e.message, true); });
+  }
+
+  /* Tất cả các tháng: tổng doanh thu từng tháng đã lấy; bấm 1 tháng để xem chi tiết từng khách */
+  function renderAll() {
+    var sum = el("dtSum"), box = el("dtList"); if (!sum || !box) return;
+    var ts = D.thang.slice().sort(function (a, b) { return a.ky < b.ky ? 1 : -1; }), tong = 0, n = 0;
+    ts.forEach(function (x) { tong += x.tong; n += x.so_dong; });
+    sum.innerHTML = ts.length
+      ? '<small>Tất cả các tháng đã lấy</small><b>' + money(tong) + ' đ</b><small>' + ts.length + ' tháng · ' + n + ' khoản</small>'
+      : '<small>Tất cả các tháng</small><b>Chưa có dữ liệu</b><small>Bấm “Lấy tất cả các tháng” (máy tính cần bật, Chrome đã đăng nhập OneBSS tài khoản BPC).</small>';
+    box.innerHTML = ts.map(function (x) {
+      return '<button type="button" class="dtcard" data-ky="' + esc(x.ky) + '"><div class="hd"><b>Tháng ' + esc(kyVN(x.ky)) + '</b><em>' + money(x.tong) + '</em></div>' +
+        '<div class="sub">' + x.so_dong + ' khoản · chưa VAT ' + money(x.tien) + ' · VAT ' + money(x.vat) + ' · bấm để xem chi tiết</div></button>';
+    }).join("");
+    box.onclick = function (e) {
+      var c = e.target.closest("[data-ky]"); if (!c) return;
+      D.ky = c.getAttribute("data-ky"); D.open = {}; load(D.ky);
+    };
+  }
+
+  /* Chờ 1 lệnh doanh_thu xong (máy tính xử lý lần lượt, mỗi tháng ~vài chục giây) */
+  function waitJob(id, t0) {
+    return new Promise(function (res, rej) {
+      (function tick() {
+        if (!el("dtBox")) { rej(new Error("đã đóng màn hình")); return; }
+        api("job.get", { id: id }).then(function (r) {
+          var j = r.job || {}, wait = Date.now() - t0;
+          if (j.trang_thai === "done") { res(); return; }
+          if (j.trang_thai === "error" || j.trang_thai === "cancelled") { rej(new Error(j.ket_qua || "Máy tính báo lỗi")); return; }
+          if (wait > 300000) { rej(new Error("Quá 5 phút chưa xong")); return; }
+          setTimeout(tick, 3000);
+        }, function () { setTimeout(tick, 4000); });
+      })();
+    });
+  }
+
+  /* Lấy lần lượt từ tháng hiện tại lùi về tháng 1 của năm nay */
+  function fetchAll() {
+    if (!connected()) { toast("Chưa kết nối backend"); return; }
+    if (D.busy) return;
+    var ms = [], now = new Date();
+    for (var m = now.getMonth() + 1; m >= 1; m--) ms.push(now.getFullYear() + "-" + z(m));
+    D.busy = true; el("dtGet").disabled = true; el("dtAll").disabled = true;
+    var i = 0;
+    function end(msg, err) { D.busy = false; var g = el("dtGet"), a = el("dtAll"); if (g) g.disabled = false; if (a) a.disabled = false; setMsg(msg, err); if (el("dtBox")) load(D.ky); }
+    (function next() {
+      if (i >= ms.length) { end(""); toast("Đã lấy xong " + ms.length + " tháng"); return; }
+      var ky = ms[i++];
+      setMsg("Đang lấy tháng " + kyVN(ky) + " (" + i + "/" + ms.length + "). Máy tính xử lý lần lượt, có thể mất vài phút…");
+      api("job.enqueue", { tool: "doanh_thu", params: { ky: ky } }).then(function (r) { return waitJob(r.id, Date.now()); })
+        .then(next, function (e) { end("❌ Dừng ở tháng " + kyVN(ky) + ": " + e.message, true); });
+    })();
   }
 
   window.openDoanhThu = function () {
@@ -125,13 +178,15 @@
       '<div class="dtbar"><select id="dtKy"></select></div>' +
       '<div class="dtsum" id="dtSum"><small>Đang tải…</small></div>' +
       '<button class="btn" id="dtGet" style="margin-top:10px">Lấy báo cáo mới nhất</button>' +
+      '<button class="btn sec" id="dtAll" style="margin-top:8px">Lấy tất cả các tháng (từ tháng 1)</button>' +
       '<div class="dtmsg" id="dtMsg"></div>' +
       '<input class="dtq" id="dtQ" type="search" placeholder="Tìm tên khách, mã thuê bao, số hóa đơn…" autocomplete="off">' +
       '<div id="dtList"></div><button class="btn sec" id="dtClose">Đóng</button></div>');
     el("dtClose").onclick = closeSheet;
     el("dtGet").onclick = fetchNew;
+    el("dtAll").onclick = fetchAll;
     el("dtKy").onchange = function () { D.ky = this.value; D.open = {}; load(D.ky); };
-    el("dtQ").oninput = function () { D.q = this.value; renderList(); };
+    el("dtQ").oninput = function () { D.q = this.value; if (D.ky === "ALL") renderAll(); else renderList(); };
     renderMonths(); load("");
   };
 })();

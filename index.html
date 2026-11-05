@@ -319,7 +319,7 @@ var TOOLS = [
   /* Báo cáo (đổi tên từ "DL khách" 31/10/2026): nút nhóm, bên trong có Doanh thu + Công nợ theo tháng. Chưa nối dữ liệu → ready:false. */
   {id:"invoice_kh", group:true, short:"Báo cáo", name:"Báo cáo", sub:"Doanh thu, công nợ theo tháng", icon:"chart", ready:true},
   {id:"bc_doanh_thu", parent:"invoice_kh", doanhthu:true, short:"Doanh thu", name:"Doanh thu", sub:"Doanh thu từng khách hàng, theo tháng", icon:"chart", ready:true, risk:"R0"},
-  {id:"bc_cong_no", parent:"invoice_kh", short:"Công nợ theo tháng", name:"Công nợ theo tháng", sub:"Tổng nợ còn lại theo từng tháng", icon:"chart", ready:false},
+  {id:"bc_cong_no", parent:"invoice_kh", congno:true, short:"Công nợ theo tháng", name:"Công nợ theo tháng", sub:"Tổng nợ còn lại theo từng tháng", icon:"chart", ready:true, risk:"R0"},
   {id:"trinh_ky", parent:"hop_dong_web", short:"Trình ký", name:"Chuyển trình hàng loạt", sub:"Chuyển trình và tải PDF hợp đồng", icon:"send", ready:false},
   {id:"ca_plugin", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},
   /* Auto FB (thay HĐ Word 30/10/2026): duyệt + đăng bài Fanpage VNPT CHƠN THÀNH. Backend: AutoFB.gs (fb.list / fb.set / fb.post / fb.new) + Make B2 đăng bài. */
@@ -669,6 +669,7 @@ function openTool(t, prefill, missing){
   if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
   if(t.support){ openSupport(); return; }
   if(t.autofb){ openAutoFB(); return; }
+  if(t.congno){ if(typeof openCongNo==="function") openCongNo(); else toast("Chưa tải được congno.js, hãy tải lại trang"); return; }   // màn Công nợ theo tháng (congno.js)
   if(t.doanhthu){ if(typeof openDoanhThu==="function") openDoanhThu(); else toast("Chưa tải được doanhthu.js, hãy tải lại trang"); return; }   // màn Doanh thu (doanhthu.js)
   if(!prefill && TOOLS.some(function(c){return c.parent===t.id;})){ openGroup(t); return; }
   if(t.link){ toast("Đang mở “"+t.name+"”…"); var a=document.createElement("a"); a.href=t.link; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove(); return; }   /* luôn mở TAB MỚI, không đè lên AI Control (window.open + noopener luôn trả null nên bản cũ rơi vào location.href) */
@@ -1369,5 +1370,6 @@ document.addEventListener("visibilitychange",function(){ if(!document.hidden){ p
 <script src="sheets.js"></script>
 <script src="sales.js"></script>
 <script src="doanhthu.js"></script>
+<script src="congno.js"></script>
 </body>
 </html>

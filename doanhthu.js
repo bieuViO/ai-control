@@ -69,6 +69,14 @@
     var s = el("dtKy"); if (!s) return;
     var ks = D.thang.map(function (t) { return t.ky; });
     if (ks.indexOf(curKy()) < 0) ks.unshift(curKy());
+    /* Luôn liệt kê 12 tháng gần nhất để chọn được cả tháng chưa lấy (vd T10) rồi bấm "Lấy báo cáo mới nhất" */
+    var now = new Date();
+    for (var i = 0; i < 12; i++) {
+      var mm = now.getMonth() - i, yy = now.getFullYear() + Math.floor(mm / 12);
+      mm = ((mm % 12) + 12) % 12;
+      var kk = yy + "-" + z(mm + 1);
+      if (ks.indexOf(kk) < 0) ks.push(kk);
+    }
     if (D.ky && ks.indexOf(D.ky) < 0) ks.push(D.ky);
     ks.sort().reverse();
     s.innerHTML = ks.map(function (k) {

@@ -884,7 +884,7 @@ function renderJobSheet(first){
    Danh sách lấy từ kết quả quét (dòng §DS§ do máy tính gửi). Mặc định KHÔNG tích ai.
    Chỉ dòng "cần cập nhật" mới tích được. Bấm Cập nhật → ghi §CHON§[id…] rồi xác nhận;
    máy tính chỉ ghi đúng những người này, không đụng giáo viên khác. */
-var VN_DS={}, VN_SEL={}, VN_Q="", VN_SCROLL={}, VN_QF=false, VN_REND="";   // VN_REND: dấu hiệu bảng chọn đã vẽ (để lần tự làm mới sau không vẽ lại, giữ bàn phím)
+var VN_DS={}, VN_SEL={}, VN_Q="", VN_SCROLL={}, VN_QF=false, VN_REND="", VN_F="all";   // VN_F: bộ lọc danh sách: all | need | multi   // VN_REND: dấu hiệu bảng chọn đã vẽ (để lần tự làm mới sau không vẽ lại, giữ bàn phím)
 function vnNorm(x){ return String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
 function vnSelRender(j){
   var box=el("vnList"); if(!box) return;
@@ -915,9 +915,12 @@ function vnSelRender(j){
   qi.oninput=function(){ VN_Q=qi.value; VN_SCROLL[j.id]=0; body(); };
   function body(){
     var bx=el("vnBody"); if(!bx) return;
-    var q=vnNorm(VN_Q), shown=ds.filter(function(x){ return !q || vnNorm(x.n).indexOf(q)>=0; });
+    var nMulti=ds.filter(mult).length;
+    var q=vnNorm(VN_Q), shown=ds.filter(function(x){ return (!q || vnNorm(x.n).indexOf(q)>=0) && (VN_F==="multi"?mult(x):(VN_F==="need"?x.t==="need":true)); });
     var nNeed=ds.filter(function(x){return x.t==="need";}).length, nSel=ds.filter(function(x){ return can(x) && sel[x.k]; }).length;
-    var h='<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
+    function chip(k,t){ var on=VN_F===k; return '<a href="#" data-vf="'+k+'" style="display:inline-block;margin:0 6px 6px 0;padding:6px 12px;border-radius:16px;font-size:13px;text-decoration:none;border:1.5px solid '+(on?'#1565c0':'#cfd8e8')+';background:'+(on?'#1565c0':'#fff')+';color:'+(on?'#fff':'#1565c0')+'">'+t+'</a>'; }
+    var h='<div style="margin:6px 0 2px">'+chip("all","Tất cả ("+ds.length+")")+chip("multi","Có 2 serial ("+nMulti+")")+chip("need","Cần cập nhật ("+nNeed+")")+'</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 8px">'+
       '<span>Hiển thị '+shown.length+'/'+ds.length+' · cần cập nhật '+nNeed+'</span>'+
       (nNeed?'<span><a href="#" id="vnAll" style="margin-right:10px">Chọn hết cần cập nhật</a><a href="#" id="vnNone">Bỏ chọn</a></span>':'')+'</div>'+
       '<div id="vnScroll" style="max-height:46vh;overflow:auto;border:1px solid #e3e9f4;border-radius:10px;overscroll-behavior:contain">';
@@ -949,6 +952,7 @@ function vnSelRender(j){
       var n=ds.filter(function(x){ return can(x) && sel[x.k]; }).length, b=el("vnGo"); if(!b) return;
       b.disabled=!n; b.textContent=n?"Cập nhật "+n+" giáo viên đã chọn":"Tích chọn giáo viên cần cập nhật";
     }
+    [].forEach.call(bx.querySelectorAll("a[data-vf]"),function(a){ a.onclick=function(e){ e.preventDefault(); VN_F=a.getAttribute("data-vf"); VN_SCROLL[j.id]=0; body(); }; });
     // Tích/bỏ tích giáo viên 1 serial: chỉ cập nhật nút và số đếm, KHÔNG vẽ lại danh sách
     [].forEach.call(bx.querySelectorAll("input[data-vc]"),function(c){ c.onchange=function(){ sel[c.getAttribute("data-vc")]=c.checked; updBtn(); }; });
     // Bấm chọn serial của giáo viên nhiều serial (bấm lại serial đang chọn / "Đang dùng" = bỏ chọn)

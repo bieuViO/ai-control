@@ -320,7 +320,7 @@ var TOOLS = [
   /* Tài khoản vnEdu (06/11/2026): tài khoản phụ huynh theo lớp, copy gửi GV. Màn riêng trong vntk.js; dùng job vnedu_serial (act ph_*) nên không cần sửa Apps Script. */
   {id:"vnedu_tk", parent:"vnedu_admin", vntk:true, short:"Tài khoản vnEdu", name:"Tài khoản vnEdu", sub:"Tài khoản phụ huynh theo lớp, copy gửi GV", icon:"users", ready:true, risk:"R0", fields:[]},
   /* Quản lý thanh toán (06/11/2026): đối chiếu đã đóng/chưa đóng đợt "Sổ liên lạc điện tử VnEdu" → đăng ký/hủy gói SLL. Màn riêng trong tttt.js; job vnedu_serial (act tt_*). GHI lên vnEdu nên luôn có hộp xác nhận. */
-  {id:"vnedu_tt", parent:"vnedu_admin", tttt:true, short:"Quản lý thanh toán", name:"Quản lý thanh toán", sub:"Đã đóng → đăng ký SLL, chưa đóng → hủy SLL", icon:"users", ready:true, risk:"R2", fields:[]},
+  {id:"vnedu_tt", parent:"vnedu_admin", tttt:true, short:"Sổ Liên Lạc Điện Tử", name:"Sổ Liên Lạc Điện Tử", sub:"Đã đóng → đăng ký SLL, chưa đóng → hủy SLL · Nhắc nợ", icon:"users", ready:true, risk:"R2", fields:[]},
   {id:"vnedu_sync", parent:"vnedu_admin", short:"Sync vnEdu", name:"VNEDU Sync Analyzer", sub:"Phân tích lịch sử đồng bộ", icon:"chart", ready:false},
   {id:"hoadon_pdf", parent:"my_tool", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
   /* Báo cáo (đổi tên từ "DL khách" 31/10/2026): nút nhóm, bên trong có Doanh thu + Công nợ theo tháng. Chưa nối dữ liệu → ready:false. */

@@ -10,7 +10,7 @@ function tNum(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
 /* ---------- Bước 1: chọn trường ---------- */
 function openTt(){
   var acc=vnAccs();
-  var h='<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>Quản lý thanh toán</b><div class="sub">Đối chiếu SLL · Nhắc nợ phụ huynh</div></div></div>'+
+  var h='<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>Sổ Liên Lạc Điện Tử</b><div class="sub">Đối chiếu SLL · Nhắc nợ phụ huynh</div></div></div>'+
     '<p class="sh-d">Chọn trường. Máy tính đăng nhập admin trường đó rồi đối chiếu đợt “Sổ liên lạc điện tử VnEdu” (chỉ đọc, chưa sửa gì).</p>';
   if(!connected()) h+='<div class="note">Chưa kết nối máy tính nên chưa dùng được chức năng này.</div>';
   if(acc.length) h+=acc.map(function(a,i){ return '<button class="gm" data-s="'+i+'"><span class="ic">'+svg("users")+'</span><span><b>'+esc(a.truong)+'</b><small>'+esc(a.tk)+'</small></span><i>›</i></button>'; }).join("");
@@ -24,7 +24,7 @@ function openTt(){
 /* ---------- Chọn việc: đối chiếu đăng ký/hủy SLL hoặc nhắc nợ ---------- */
 function ttMenu(a){
   TT.tk=a.tk; TT.truong=a.truong;
-  openSheet('<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>'+esc(a.truong)+'</b><div class="sub">Quản lý thanh toán</div></div></div>'+
+  openSheet('<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>'+esc(a.truong)+'</b><div class="sub">Sổ Liên Lạc Điện Tử</div></div></div>'+
     '<button class="gm" id="ttM1"><span class="ic">'+svg("users")+'</span><span><b>Đăng ký / hủy gói SLL theo thanh toán</b><small>Đã đóng → đăng ký, chưa đóng → hủy (đợt Sổ liên lạc điện tử)</small></span><i>›</i></button>'+
     '<button class="gm" id="ttM2"><span class="ic">'+svg("users")+'</span><span><b>Nhắc nợ phụ huynh</b><small>Gửi thông báo nợ cho học sinh chưa đóng, toàn trường theo từng đợt</small></span><i>›</i></button>'+
     '<button class="btn sec" id="ttBack">Đổi trường</button><button class="btn sec" id="ttX">Đóng</button>');

@@ -102,6 +102,9 @@ h3.sec{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--m
   max-height:92vh;overflow:auto;transform:translateY(105%);transition:transform .26s cubic-bezier(.2,.8,.2,1);padding:8px 18px calc(20px + env(safe-area-inset-bottom))}
 .sheet.open{transform:none}
 .grab{width:42px;height:4px;border-radius:4px;background:#D0D5DD;margin:6px auto 14px}
+.navb{display:flex;justify-content:space-between;align-items:center;margin:-6px -4px 6px}
+.navk{width:40px;height:40px;border-radius:50%;border:0;background:var(--blue-soft);color:var(--blue);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+.navk:active{opacity:.7}
 @media (min-width:900px){
   .sheet{left:auto;right:0;top:0;bottom:0;max-width:440px;width:440px;max-height:none;border-radius:0;transform:translateX(105%);padding:22px 24px;box-shadow:-8px 0 30px rgba(16,24,40,.18)}
   .sheet.open{transform:none}.grab{display:none}.back{background:rgba(16,24,40,.25)}
@@ -560,14 +563,43 @@ function renderJobs(){
 function openActivity(){ actOpen=true; renderActivity(true); }
 function renderActivity(first){
   var h='<div class="sh-h"><span class="ic">'+svg("clock")+'</span><div><b>Hoạt động gần đây</b></div></div>'+jobRows(JOBS.slice(0,12))+'<button class="btn sec" id="btnCloseA">Đóng</button>';
-  if(first) openSheet(h); else el("sheet").innerHTML='<div class="grab"></div>'+h;
+  if(first) openSheet(h); else shFill(h);
   el("btnCloseA").onclick=closeSheet;
 }
 
 /* ---------- cửa sổ trượt ---------- */
 var openJobId=null;
-function openSheet(html){ var s=el("sheet"); s.innerHTML='<div class="grab"></div>'+html; el("back").style.display="block"; setTimeout(function(){s.classList.add("open");},10); }
-function closeSheet(){ clearInterval(supTimer); supTimer=null; openJobId=null; actOpen=false; el("sheet").classList.remove("open"); el("back").style.display="none"; }
+/* Nút ← (quay lại bước trước) và ✕ (hủy thao tác + đóng) có ở mọi cửa sổ.
+   NAV = ngăn xếp các màn đã mở trước đó (giữ nguyên nút bấm); màn đang chạy (…Prog) và màn vẽ lại cùng tiêu đề không được lưu. */
+var NAV=[];
+function navBar(){ return '<div class="navb"><button type="button" class="navk" id="navBk" aria-label="Quay lại">←</button><button type="button" class="navk" id="navX" aria-label="Hủy và đóng">✕</button></div>'; }
+function cancelOps(){ try{ TT.run++; }catch(e){} try{ VT.run++; }catch(e){} }   // dừng các màn đang chờ máy tính trả lời
+function shWire(){
+  var b=el("navBk"), x=el("navX");
+  if(b){ b.style.visibility=NAV.length?"visible":"hidden"; b.onclick=navBack; }
+  // ✕: màn lệnh đang chạy thì dùng đúng nút Đóng của màn đó (tự dừng lệnh treo / vnEdu Serial); màn khác thì dừng chờ + đóng
+  if(x) x.onclick=function(){ var c=el("btnClose2"); if(c){ c.click(); return; } cancelOps(); closeSheet(); };
+}
+function shFill(h){ el("sheet").innerHTML='<div class="grab"></div>'+navBar()+h; shWire(); }
+function navBack(){
+  var prev=NAV.pop(); if(!prev) return;
+  cancelOps(); clearInterval(supTimer); supTimer=null; openJobId=null; actOpen=false;
+  var s=el("sheet"); s.innerHTML='<div class="grab"></div>'+navBar();
+  prev.forEach(function(n){ s.appendChild(n); });
+  shWire(); if(el("btnCloseA")) actOpen=true; s.scrollTop=0;
+}
+function openSheet(html){
+  var s=el("sheet");
+  if(s.classList.contains("open")){
+    var keep=[].filter.call(s.childNodes,function(n){ return !(n.classList&&(n.classList.contains("grab")||n.classList.contains("navb"))); });
+    var hd=s.querySelector(".sh-h"), key=hd?hd.textContent:"";
+    var d=document.createElement("div"); d.innerHTML=html; var nh=d.querySelector(".sh-h"), nkey=nh?nh.textContent:"";
+    if(keep.length && !s.querySelector('[id$="Prog"]') && key!==nkey) NAV.push(keep);
+  } else NAV=[];
+  s.innerHTML='<div class="grab"></div>'+navBar()+html; shWire();
+  el("back").style.display="block"; setTimeout(function(){s.classList.add("open");},10);
+}
+function closeSheet(){ NAV=[]; clearInterval(supTimer); supTimer=null; openJobId=null; actOpen=false; el("sheet").classList.remove("open"); el("back").style.display="none"; }
 el("back").onclick=closeSheet;
 function toast(m){ var t=el("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast.h); toast.h=setTimeout(function(){t.style.display="none";},2800); }
 
@@ -631,7 +663,7 @@ function openVnedu(t){
     '<button class="btn sec" id="vnOpen">Dùng phiên vnEdu đang mở sẵn trên máy tính</button>'+
     '<button class="btn sec" id="vnClose">Đóng</button>';
   openSheet(h);
-  function send(p){ submitJob(t,p).then(function(r){ closeSheet(); toast(connected()?"Đã gửi lệnh, đang chờ máy tính nhận":"Đã ghi (chế độ Demo)"); if(connected()&&r.id) setTimeout(function(){ openJob(r.id); },350); }).catch(function(e){ toast("Lỗi: "+e.message); }); }
+  function send(p){ submitJob(t,p).then(function(r){ if(!(connected()&&r.id)) closeSheet(); toast(connected()?"Đã gửi lệnh, đang chờ máy tính nhận":"Đã ghi (chế độ Demo)"); if(connected()&&r.id) setTimeout(function(){ openJob(r.id); },350); }).catch(function(e){ toast("Lỗi: "+e.message); }); }
   [].forEach.call(document.querySelectorAll("[data-v]"),function(b){ b.onclick=function(){ var a=acc[+b.getAttribute("data-v")]; send({tk:a.tk, truong:a.truong}); }; });
   [].forEach.call(document.querySelectorAll("[data-del]"),function(b){ b.onclick=function(){ var i=+b.getAttribute("data-del"); if(!confirm("Xóa “"+acc[i].truong+"” khỏi danh sách?")) return; acc.splice(i,1); vnSave(acc); openVnedu(t); }; });
   el("vnAdd").onclick=function(){
@@ -836,7 +868,7 @@ function renderJobSheet(first){
   if((st==="error"||st==="cancelled"||stale) && j.params && typeof j.params==="object") h+='<button class="btn" id="btnRetry">Chạy lại</button>';
   h+='<button class="btn sec" id="btnClose2">Đóng</button>';
   var sh=el("sheet");
-  if(first || !el("btnClose2")){ openSheet(h); } else { sh.innerHTML='<div class="grab"></div>'+h; }
+  if(first || !el("btnClose2")){ openSheet(h); } else { shFill(h); }
   // Bấm Đóng = DỪNG lệnh nếu lệnh đang treo (quá 3 phút không cập nhật) hoặc là vnEdu Serial đang chờ/chạy → không còn cảnh báo nữa.
   el("btnClose2").onclick=function(){
     var active=["queued","running","await_confirm","confirmed"].indexOf(st)>=0;

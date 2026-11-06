@@ -8,7 +8,7 @@ var VT_ST={m:"Mật khẩu khởi tạo",s:"Đã gửi SMS",d:"Đã đổi MK",x
 function vtNo(s){ return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
 
 /* Gửi lệnh cho máy tính rồi chờ kết quả (tối đa ~3 phút). onProg nhận dòng tiến độ đầu tiên của máy tính. */
-function vtRun(params,onProg){
+function vtRun(params,onProg,maxN){
   return api("job.enqueue",{tool:"vnedu_serial", params:params}).then(function(r){
     var id=r.id, n=0;
     return new Promise(function(res,rej){
@@ -18,7 +18,7 @@ function vtRun(params,onProg){
           if(j.trang_thai==="done"){ res({id:id,text:t}); return; }
           if(j.trang_thai==="error"||j.trang_thai==="cancelled"){ rej(new Error(t||"Máy tính báo lỗi")); return; }
           if(onProg) onProg(t.split("\n")[0]);
-          if(++n>90){ rej(new Error("Máy tính chưa phản hồi. Kiểm tra máy tính đang bật và Chrome đang mở.")); return; }
+          if(++n>(maxN||90)){ rej(new Error("Máy tính chưa phản hồi. Kiểm tra máy tính đang bật và Chrome đang mở.")); return; }
           setTimeout(poll,2000);
         }).catch(rej);
       })();

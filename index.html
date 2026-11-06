@@ -316,6 +316,8 @@ var TOOLS = [
    fields:[]},
   /* Tài khoản vnEdu (06/11/2026): tài khoản phụ huynh theo lớp, copy gửi GV. Màn riêng trong vntk.js; dùng job vnedu_serial (act ph_*) nên không cần sửa Apps Script. */
   {id:"vnedu_tk", parent:"vnedu_admin", vntk:true, short:"Tài khoản vnEdu", name:"Tài khoản vnEdu", sub:"Tài khoản phụ huynh theo lớp, copy gửi GV", icon:"users", ready:true, risk:"R0", fields:[]},
+  /* Quản lý thanh toán (06/11/2026): đối chiếu đã đóng/chưa đóng đợt "Sổ liên lạc điện tử VnEdu" → đăng ký/hủy gói SLL. Màn riêng trong tttt.js; job vnedu_serial (act tt_*). GHI lên vnEdu nên luôn có hộp xác nhận. */
+  {id:"vnedu_tt", parent:"vnedu_admin", tttt:true, short:"Quản lý thanh toán", name:"Quản lý thanh toán", sub:"Đã đóng → đăng ký SLL, chưa đóng → hủy SLL", icon:"users", ready:true, risk:"R2", fields:[]},
   {id:"vnedu_sync", parent:"vnedu_admin", short:"Sync vnEdu", name:"VNEDU Sync Analyzer", sub:"Phân tích lịch sử đồng bộ", icon:"chart", ready:false},
   {id:"hoadon_pdf", parent:"my_tool", short:"PDF hóa đơn", name:"Tải PDF hóa đơn", sub:"Tải hàng loạt từ VNPT Invoice", icon:"download", ready:false},
   /* Báo cáo (đổi tên từ "DL khách" 31/10/2026): nút nhóm, bên trong có Doanh thu + Công nợ theo tháng. Chưa nối dữ liệu → ready:false. */
@@ -667,6 +669,7 @@ function openTool(t, prefill, missing){
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
   if(t.sales){ if(typeof openSales==="function") openSales(); else toast("Chưa tải được sales.js, hãy tải lại trang"); return; }   // AI Bán Hàng (sales.js)
+  if(t.tttt){ if(typeof openTt==="function") openTt(); else toast("Chưa tải được tttt.js, hãy tải lại trang"); return; }   // Quản lý thanh toán (tttt.js)
   if(t.vntk){ if(typeof openVnTk==="function") openVnTk(); else toast("Chưa tải được vntk.js, hãy tải lại trang"); return; }   // Tài khoản vnEdu (vntk.js)
   if(!t.ready){ openSoon(t); return; }
   if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
@@ -1375,5 +1378,6 @@ document.addEventListener("visibilitychange",function(){ if(!document.hidden){ p
 <script src="doanhthu.js"></script>
 <script src="congno.js"></script>
 <script src="vntk.js"></script>
+<script src="tttt.js"></script>
 </body>
 </html>

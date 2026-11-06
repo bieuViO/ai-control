@@ -17,6 +17,12 @@ function vtRun(params,onProg,maxN){
           var j=g.job||{}, t=String(j.ket_qua||"");
           if(j.trang_thai==="done"){ res({id:id,text:t}); return; }
           if(j.trang_thai==="error"||j.trang_thai==="cancelled"){ rej(new Error(t||"Máy tính báo lỗi")); return; }
+          // Lệnh ph_/tt_ KHÔNG BAO GIỜ chờ xác nhận. Nếu có → extension trên máy tính còn bản cũ, không hiểu lệnh và chạy nhầm sang quét serial.
+          if(j.trang_thai==="await_confirm"){
+            api("job.update",{id:id,trang_thai:"cancelled",ket_qua:"Đã hủy: extension vnEdu trên máy tính còn bản cũ."}).catch(function(){});
+            rej(new Error("Extension vnEdu trên máy tính còn là bản CŨ nên chạy nhầm sang quét serial (chưa sửa gì, đã hủy lệnh đó). Mở chrome://extensions → bấm ↻ ở “vnEdu – Cập nhật serial chữ ký số” (cần bản 1.12.0) rồi thử lại."));
+            return;
+          }
           if(onProg) onProg(t.split("\n")[0]);
           if(++n>(maxN||90)){ rej(new Error("Máy tính chưa phản hồi. Kiểm tra máy tính đang bật và Chrome đang mở.")); return; }
           setTimeout(poll,2000);

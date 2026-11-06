@@ -10,7 +10,7 @@ function tNum(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
 /* ---------- Bước 1: chọn trường ---------- */
 function openTt(){
   var acc=vnAccs();
-  var h='<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>Quản lý thanh toán</b><div class="sub">Đối chiếu đã đóng / chưa đóng → đăng ký, hủy SLL</div></div></div>'+
+  var h='<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>Quản lý thanh toán</b><div class="sub">Đối chiếu SLL · Nhắc nợ phụ huynh</div></div></div>'+
     '<p class="sh-d">Chọn trường. Máy tính đăng nhập admin trường đó rồi đối chiếu đợt “Sổ liên lạc điện tử VnEdu” (chỉ đọc, chưa sửa gì).</p>';
   if(!connected()) h+='<div class="note">Chưa kết nối máy tính nên chưa dùng được chức năng này.</div>';
   if(acc.length) h+=acc.map(function(a,i){ return '<button class="gm" data-s="'+i+'"><span class="ic">'+svg("users")+'</span><span><b>'+esc(a.truong)+'</b><small>'+esc(a.tk)+'</small></span><i>›</i></button>'; }).join("");
@@ -18,7 +18,88 @@ function openTt(){
   h+='<button class="btn sec" id="ttX">Đóng</button>';
   openSheet(h);
   el("ttX").onclick=function(){ TT.run++; closeSheet(); };
-  [].forEach.call(document.querySelectorAll("[data-s]"),function(b){ b.onclick=function(){ ttPlan(acc[+b.getAttribute("data-s")]); }; });
+  [].forEach.call(document.querySelectorAll("[data-s]"),function(b){ b.onclick=function(){ ttMenu(acc[+b.getAttribute("data-s")]); }; });
+}
+
+/* ---------- Chọn việc: đối chiếu đăng ký/hủy SLL hoặc nhắc nợ ---------- */
+function ttMenu(a){
+  TT.tk=a.tk; TT.truong=a.truong;
+  openSheet('<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>'+esc(a.truong)+'</b><div class="sub">Quản lý thanh toán</div></div></div>'+
+    '<button class="gm" id="ttM1"><span class="ic">'+svg("users")+'</span><span><b>Đăng ký / hủy gói SLL theo thanh toán</b><small>Đã đóng → đăng ký, chưa đóng → hủy (đợt Sổ liên lạc điện tử)</small></span><i>›</i></button>'+
+    '<button class="gm" id="ttM2"><span class="ic">'+svg("users")+'</span><span><b>Nhắc nợ phụ huynh</b><small>Gửi thông báo nợ cho học sinh chưa đóng, toàn trường theo từng đợt</small></span><i>›</i></button>'+
+    '<button class="btn sec" id="ttBack">Đổi trường</button><button class="btn sec" id="ttX">Đóng</button>');
+  el("ttX").onclick=function(){ TT.run++; closeSheet(); };
+  el("ttBack").onclick=function(){ TT.run++; openTt(); };
+  el("ttM1").onclick=function(){ ttPlan(a); };
+  el("ttM2").onclick=function(){ ttNhacPlan(a); };
+}
+
+/* ---------- Nhắc nợ phụ huynh (dùng chức năng "Gửi thông báo nợ" của vnEdu) ---------- */
+var TT_NHAC_MAU="(TB) Học sinh [TEN_HOC_SINH], ma [MA_HS] cần nộp số tiền [SO_TIEN] VND. Truy cập ứng dụng vnEdu Connect hoặc VNPT Money để dễ dàng thanh toán online.";
+function ttNhacPlan(a){
+  if(!connected()){ toast("Chưa kết nối máy tính"); return; }
+  var my=++TT.run; TT.tk=a.tk; TT.truong=a.truong; TT.nhac=null;
+  openSheet('<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>'+esc(a.truong)+'</b><div class="sub">Nhắc nợ phụ huynh</div></div></div>'+
+    '<div class="note info" id="ttProg">Đang gửi lệnh cho máy tính…</div><button class="btn sec" id="ttX">Đóng</button>');
+  el("ttX").onclick=function(){ TT.run++; closeSheet(); };
+  vtRun({act:"tt_nhac_plan",tk:a.tk,truong:a.truong,title:""},function(t){ if(my===TT.run&&el("ttProg")&&t) el("ttProg").textContent=t; },150).then(function(r){
+    if(my!==TT.run) return;
+    var i=r.text.indexOf("§NHAC§"); if(i<0) throw new Error("Máy tính trả dữ liệu không đúng");
+    TT.nhac=JSON.parse(r.text.slice(i+6)); vtWipe(r.id); ttNhacShow();
+  }).catch(function(e){
+    if(my!==TT.run) return;
+    var p=el("ttProg"); if(p){ p.className="note err"; p.textContent="Lỗi: "+e.message; }
+  });
+}
+function ttNhacShow(){
+  var N=TT.nhac, keep=el("ttNd")?el("ttNd").value:TT_NHAC_MAU;
+  var h='<div class="sh-h"><span class="ic">'+svg("users")+'</span><div><b>'+esc(TT.truong)+'</b><div class="sub">Nhắc nợ phụ huynh · toàn trường</div></div></div>'+
+    '<div class="fld"><label>Đợt thanh toán</label><select id="ttDot">'+N.dots.map(function(d,i){
+      var todo=d.n-d.sent;
+      return '<option value="'+i+'"'+(d.expired||todo<=0?' disabled':'')+'>'+esc(d.ten)+' — chưa đóng '+tNum(d.n)+(d.sent?' (đã nhắc hôm nay '+tNum(d.sent)+')':'')+(d.expired?' · HẾT HẠN':'')+'</option>'; }).join("")+'</select></div>'+
+    '<div id="ttDotInfo"></div>'+
+    '<div class="fld" style="margin-top:10px"><label>Gửi bằng</label><select id="ttTy"><option value="1">Ứng dụng vnEdu Connect (miễn phí)</option><option value="3">SMS VNPT Money (miễn phí)</option><option value="2">SMS Sổ liên lạc (có thể tính cước)</option></select></div>'+
+    '<div class="fld" style="margin-top:10px"><label>Nội dung (tối đa 150 ký tự; giữ [TEN_HOC_SINH] [MA_HS] [SO_TIEN] để vnEdu tự điền)</label><textarea id="ttNd" rows="4" maxlength="150" style="width:100%;box-sizing:border-box">'+esc(keep)+'</textarea></div>'+
+    '<div class="sub" id="ttLen"></div>'+
+    '<button class="btn danger" id="ttSend" style="margin-top:12px">Gửi nhắc nợ</button>'+
+    '<div id="ttOut"></div><button class="btn sec" id="ttRe">Lấy lại số liệu</button><button class="btn sec" id="ttBack">Quay lại</button><button class="btn sec" id="ttX">Đóng</button>';
+  openSheet(h);
+  var sel=el("ttDot"); for(var k=0;k<sel.options.length;k++){ if(!sel.options[k].disabled){ sel.selectedIndex=k; break; } }
+  function upd(){
+    var d=N.dots[+sel.value], len=el("ttNd").value.length;
+    el("ttLen").textContent=len+"/150 ký tự";
+    el("ttDotInfo").innerHTML=d?'<div class="note '+(d.expired?'err':'info')+'">'+(d.expired?'Đợt đã hết hạn ('+esc(d.end)+'), vnEdu không cho gửi thông báo.':'Hạn đóng '+esc(d.end)+' · Chưa đóng: <b>'+tNum(d.n)+'</b> em · Sẽ nhắc: <b>'+tNum(Math.max(0,d.n-d.sent))+'</b> em (bỏ qua em đã nhắc hôm nay) · Tổng tiền chưa thu: '+tNum(d.sum)+' đ')+'</div>':'';
+  }
+  sel.onchange=upd; el("ttNd").oninput=upd; upd();
+  el("ttX").onclick=function(){ TT.run++; closeSheet(); };
+  el("ttBack").onclick=function(){ TT.run++; ttMenu({tk:TT.tk,truong:TT.truong}); };
+  el("ttRe").onclick=function(){ ttNhacPlan({tk:TT.tk,truong:TT.truong}); };
+  el("ttSend").onclick=ttNhacSend;
+}
+function ttNhacSend(){
+  var N=TT.nhac, d=N.dots[+el("ttDot").value], ty=el("ttTy").value, nd=el("ttNd").value.trim();
+  if(!d||d.expired){ toast("Đợt này không gửi được"); return; }
+  var todo=Math.max(0,d.n-d.sent);
+  if(!todo){ toast("Không còn em nào cần nhắc hôm nay"); return; }
+  if(!nd||nd.length>150){ toast("Nội dung phải có chữ và tối đa 150 ký tự"); return; }
+  var kenh=ty==="1"?"ứng dụng vnEdu Connect":(ty==="3"?"SMS VNPT Money":"SMS Sổ liên lạc (có thể bị tính cước)");
+  if(!confirm("Gửi nhắc nợ cho "+tNum(todo)+" học sinh CHƯA đóng của đợt:\n"+d.ten+"\nTrường: "+TT.truong+"\nGửi bằng: "+kenh+"\n\nNội dung:\n"+nd+"\n\nTin gửi thật tới phụ huynh, không thu hồi được. Tiếp tục?")) return;
+  if(ty==="2"&&!confirm("SMS Sổ liên lạc có thể bị trừ cước theo gói của trường. Vẫn gửi?")) return;
+  if(!connected()){ toast("Chưa kết nối máy tính"); return; }
+  var my=++TT.run;
+  ["ttSend","ttRe"].forEach(function(i){ if(el(i)) el(i).disabled=true; });
+  el("ttOut").innerHTML='<div class="note info" id="ttProg">Đang gửi lệnh cho máy tính… (có thể mất vài phút, đừng đóng Chrome)</div>';
+  vtRun({act:"tt_nhac_send",tk:TT.tk,truong:TT.truong,title:N.title,dot:d.id,type:ty,content:nd},
+    function(t){ if(my===TT.run&&el("ttProg")&&t) el("ttProg").textContent=t; },300).then(function(r){
+    var i=r.text.indexOf("§NHACS§"); if(i<0) throw new Error("Máy tính trả dữ liệu không đúng");
+    var x=JSON.parse(r.text.slice(i+7)); vtWipe(r.id);
+    d.sent+=x.sent;                                  // cập nhật số đã nhắc hôm nay trên màn hình
+    if(el("ttOut")) el("ttOut").innerHTML='<div class="note info">Xong: đã nhắc <b>'+tNum(x.sent)+'</b> em (bỏ qua '+tNum(x.skipped)+' em đã nhắc hôm nay).'+(x.msg?'<br>vnEdu: '+esc(x.msg):'')+'</div>';
+    ["ttSend","ttRe"].forEach(function(k){ if(el(k)) el(k).disabled=false; });
+  }).catch(function(e){
+    if(el("ttOut")) el("ttOut").innerHTML='<div class="note err">Lỗi: '+esc(e.message)+'<br>Bấm “Lấy lại số liệu” để xem tình trạng thực tế trước khi gửi tiếp (em đã nhắc sẽ được bỏ qua).</div>';
+    ["ttSend","ttRe"].forEach(function(k){ if(el(k)) el(k).disabled=false; });
+  });
 }
 
 /* ---------- Bước 2: đối chiếu (chỉ đọc) ---------- */

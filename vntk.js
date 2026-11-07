@@ -154,7 +154,7 @@ function vtRender(){
 /* ---------- Reset mật khẩu (GHI lên vnEdu): chỉ chạy sau khi anh bấm OK ở hộp xác nhận ---------- */
 function vtReset(r){
   if(!r) return;
-  if(!confirm("Reset mật khẩu phụ huynh của "+r[1]+(r[2]?" (lớp "+r[2]+")":"")+"?\n\nvnEdu sẽ đặt lại mật khẩu cho tài khoản "+r[4]+". vnEdu sẽ GỬI MẬT KHẨU MỚI QUA SMS cho phụ huynh (số "+r[4]+") và KHÔNG hiện mật khẩu cho quản trị viên, app cũng không xem được. Muốn có mật khẩu phải xin phụ huynh đọc lại tin nhắn. Không hoàn tác được.")) return;
+  if(!confirm("Reset mật khẩu phụ huynh của "+r[1]+(r[2]?" (lớp "+r[2]+")":"")+"?\n\nvnEdu sẽ đặt lại mật khẩu cho tài khoản "+r[4]+". vnEdu sẽ đặt lại mật khẩu và GỬI SMS cho phụ huynh. Nếu vnEdu hiện mật khẩu mới thì app sẽ hiện ngay để anh bấm Copy; nếu vnEdu chỉ ghi \"Đã gửi SMS\" thì mật khẩu chỉ nằm trong tin nhắn của phụ huynh. Không hoàn tác được.")) return;
   var my=++VT.run;
   vtBusy(true);
   el("vtInfo").innerHTML='<div class="note info" id="vtProg">Đang gửi lệnh reset cho máy tính…</div>';
@@ -163,7 +163,7 @@ function vtReset(r){
     var i=res.text.indexOf("§PH§"); if(i<0) throw new Error("Máy tính trả dữ liệu không đúng");
     var nr=JSON.parse(res.text.slice(i+4))[0];
     if(nr) VT.rows=VT.rows.map(function(x){ return x[0]===nr[0]?nr:x; });
-    el("vtInfo").innerHTML='<div class="note info">Đã reset: '+esc(r[1])+'. '+esc(res.text.split("\n")[0])+' Mật khẩu mới chỉ nằm trong tin SMS gửi cho phụ huynh, vnEdu không cho quản trị viên xem.</div>';
+    el("vtInfo").innerHTML='<div class="note info">Đã reset: '+esc(r[1])+'. '+esc(res.text.split("\n")[0])+''+(nr&&nr[6]==="m"?" Mật khẩu mới hiện bên dưới, bấm Copy gửi GV.":" vnEdu chưa hiện mật khẩu mới (chỉ ghi Đã gửi SMS). Anh thử tìm lại học sinh sau ít phút, hoặc xin phụ huynh đọc lại tin nhắn.")+'</div>';
     vtWipe(res.id); vtBusy(false); vtRender();
   }).catch(function(e){
     if(my!==VT.run) return;

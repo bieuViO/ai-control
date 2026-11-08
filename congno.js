@@ -52,11 +52,11 @@
   }
   function render() { renderMonths(); if (D.ky === "ALL") renderAll(); else renderMonth(); }
   function load(ky) {
-    if (!connected()) { setMsg("Chưa kết nối backend"); return Promise.resolve(); }
+    if (!connected()) { setMsg("Chưa kết nối backend"); el("cnSum").innerHTML = "<small>Chưa kết nối</small>"; return Promise.resolve(); }
     D.ky = ky || "ALL"; D.open = {};
     return api("cn.get", { ky: D.ky === "ALL" ? "" : D.ky }).then(function (r) {
       D.thang = r.thang || []; D.rows = r.rows || []; D.cap = r.cap_nhat || ""; setMsg(""); render();
-    }, function (e) { setMsg(/không hỗ trợ|unknown|Không biết/i.test(e.message) ? "Backend chưa có CongNo.gs (cần dán vào Apps Script và triển khai lại)." : "Không tải được: " + e.message); });
+    }, function (e) { el("cnSum").innerHTML = "<small>Không có dữ liệu</small>"; setMsg(/Action không hợp lệ|không hỗ trợ|unknown|Không biết/i.test(e.message) ? "Backend chưa có CongNo.gs (cần dán vào Apps Script và triển khai lại)." : "Không tải được: " + e.message); });
   }
   window.openCongNo = function () {
     D.q = ""; D.open = {}; D.ky = "ALL"; D.onlyDebt = true;

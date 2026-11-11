@@ -3,11 +3,12 @@
 (function () {
   var stl = document.createElement("style");
   stl.textContent = ".cnsum{margin-top:12px;border-radius:14px;padding:12px 14px;background:#FBEAE9;color:#7A2420}.cnsum b{display:block;font-size:22px;color:#B23A34}.cnsum small{display:block;font-size:12.5px;margin-top:3px;color:var(--mute)}" +
-    ".cnchk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.cncard em.red{color:#B23A34}";
+    ".cnchips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.cnchips::-webkit-scrollbar{display:none}.cnchips button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;font:inherit;text-align:center;line-height:1.25;color:var(--ink,#1b2430)}.cnchips button b{display:block;font-size:14px}.cnchips button small{display:block;font-size:11.5px;color:#B23A34}.cnchips button.on{background:#0B3D66;border-color:#0B3D66;color:#fff}.cnchips button.on small{color:#FFD9D6}.cnchips button.z small{color:#1E7A46}.cnchips button.on.z small{color:#CFF0DB}.cncard .hd b{font-size:15px}.cncard .ln{font-size:13px}.cnchk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.cncard em.red{color:#B23A34}";
   document.head.appendChild(stl);
   var D = { ky: "ALL", thang: [], rows: [], cap: "", q: "", onlyDebt: true, open: {} };
   function z(n) { return ("0" + n).slice(-2); }
   function money(n) { return fmtMoney(Math.round(n || 0)); }
+  function tr(n) { n = Math.round(n || 0); if (n <= 0) return "0 đ"; if (n >= 1e6) return (n / 1e6).toFixed(1).replace(".", ",").replace(/,0$/, "") + " tr"; return fmtMoney(n); }
   function kyVN(k) { return k ? (k.slice(5) + "/" + k.slice(0, 4)) : ""; }
   function noAcc(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase(); }
   function capVN(s) { var m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/.exec(String(s || "")); return m ? (m[4] + " " + m[3] + "/" + m[2]) : ""; }
@@ -16,9 +17,11 @@
   function renderMonths() {
     var s = el("cnKy"); if (!s) return;
     var tong = D.thang.reduce(function (a, x) { return a + x.con_no; }, 0);
-    s.innerHTML = '<option value="ALL"' + (D.ky === "ALL" ? " selected" : "") + ">Tất cả các tháng · nợ " + money(tong) + " đ</option>" + D.thang.map(function (x) {
-      return '<option value="' + x.ky + '"' + (x.ky === D.ky ? " selected" : "") + ">Tháng " + kyVN(x.ky) + " · nợ " + money(x.con_no) + " đ</option>";
+    s.innerHTML = '<button type="button" data-k="ALL" class="' + (D.ky === "ALL" ? "on" : "") + (tong > 0 ? "" : " z") + '"><b>Tất cả</b><small>nợ ' + tr(tong) + "</small></button>" + D.thang.map(function (x) {
+      return '<button type="button" data-k="' + x.ky + '" class="' + (x.ky === D.ky ? "on" : "") + (x.con_no > 0 ? "" : " z") + '"><b>T' + esc(kyVN(x.ky).replace(/\/20(\d\d)$/, "/$1")) + "</b><small>" + (x.con_no > 0 ? "nợ " + tr(x.con_no) : "hết nợ") + "</small></button>";
     }).join("");
+    s.onclick = function (e) { var b = e.target.closest("[data-k]"); if (b) load(b.getAttribute("data-k")); };
+    var on = s.querySelector(".on"); if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest" });
   }
   function renderAll() {
     var ts = D.thang.slice().sort(function (a, b) { return a.ky < b.ky ? 1 : -1; }), no = 0, dt = 0, dthu = 0;
@@ -62,12 +65,11 @@
     D.q = ""; D.open = {}; D.ky = "ALL"; D.onlyDebt = true;
     openSheet('<div id="cnBox"><div class="sh-h"><span class="ic">' + svg("chart") + '</span><div><b>Công nợ theo tháng</b></div></div>' +
       '<p class="sh-d">Tổng nợ còn lại từng tháng và từng khách (từ hệ thống Theo dõi công nợ).</p>' +
-      '<div class="dtbar"><select id="cnKy"></select></div><div class="cnsum" id="cnSum"><small>Đang tải…</small></div><div id="cnMsg"></div>' +
+      '<div class="cnchips" id="cnKy"></div><div class="cnsum" id="cnSum"><small>Đang tải…</small></div><div id="cnMsg"></div>' +
       '<label class="cnchk"><input type="checkbox" id="cnDebt" checked> Chỉ hiện khoản còn nợ</label>' +
       '<input class="dtq" id="cnQ" type="search" placeholder="Tìm tên khách, mã thuê bao…" autocomplete="off">' +
       '<div id="cnList"></div><button class="btn sec" id="cnClose">Đóng</button></div>');
     el("cnClose").onclick = closeSheet;
-    el("cnKy").onchange = function () { load(this.value); };
     el("cnDebt").onchange = function () { D.onlyDebt = this.checked; if (D.ky !== "ALL") renderMonth(); };
     el("cnQ").oninput = function () { D.q = this.value; if (D.ky !== "ALL") renderMonth(); };
     load("ALL");

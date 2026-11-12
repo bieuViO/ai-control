@@ -178,7 +178,7 @@ pre.res{white-space:pre-wrap;word-break:break-word;background:#F8FAFD;border:1px
   <div class="stage" id="stage">
     <svg id="rings" viewBox="0 0 100 100" aria-hidden="true"></svg>
     <div id="nodes"></div>
-    <button class="hub" id="hub" aria-label="Nhập lệnh cho AI Control"><b>AI</b><small id="hubTxt">Control</small><span class="cnt" id="cntHub"></span></button>
+    <button class="hub" id="hub" aria-label="Bộ não AI Control: hôm nay và ra lệnh"><b>AI</b><small id="hubTxt">Control</small><span class="cnt" id="cntHub"></span></button>
   </div>
 </div>
 
@@ -1153,9 +1153,14 @@ function cnTra(q,quiet){
   }).catch(function(err){ if(!quiet) el("cmdHint").textContent="Không tra được: "+err.message; });
 }
 /* ---------- ô lệnh tự do + giọng nói ---------- */
+/* aic-v65: ô lệnh chuyển cho BỘ NÃO (brain.js). Cách cũ giữ trong legacyCmd() – dùng khi bộ não lỗi. */
 el("cmdForm").onsubmit=function(e){
   e.preventDefault();
   var v=el("cmdInput").value.trim(); if(!v) return;
+  if(connected() && typeof openBrain==="function"){ el("cmdInput").value=""; toggleCmd(false); openBrain(v); return; }
+  legacyCmd(v);
+};
+function legacyCmd(v){
   if(!connected()){ toast("Cần kết nối backend (Cài đặt) để dịch lệnh"); return; }
   if(/^[\d\s\-]{9,}$/.test(v)){ cnTra(v); return; }   // chỉ gõ MST → tra công nợ ngay, khỏi qua Gemini
   // Câu hỏi về nợ ("… còn nợ bao nhiêu") → tra thẳng, không cần Gemini (tránh lỗi 503). Lệnh nhắc/gửi mail vẫn đi qua Gemini.
@@ -1169,7 +1174,7 @@ el("cmdForm").onsubmit=function(e){
     if(t.id==="hop_dong_web" && pre.dich_vu){ var m=String(pre.dich_vu).match(/^BHXH VAN (\S+) - (\d+) tháng$/); if(m){ pre.nhom_dv="BHXH VAN"; pre.van_goi=m[1]; pre.van_thang=m[2]; } else pre.nhom_dv=pre.dich_vu; }
     el("cmdInput").value=""; toggleCmd(false); openTool(t, pre, p.thieu||[]);
   }).catch(function(err){ el("cmdHint").textContent="Không dịch được: "+err.message; cnTra(v,true); });   // Gemini lỗi → thử tra công nợ theo tên/MST
-};
+}
 (function(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, b=el("btnMic");
   if(!SR){ b.classList.add("hide"); return; }
@@ -1384,7 +1389,7 @@ document.addEventListener("click",function(e){
   var t=e.target.closest("[data-t]"); if(t){ openTool(toolById(t.dataset.t)); return; }
   var j=e.target.closest("[data-j]"); if(j){ openJob(j.dataset.j); }
 });
-el("btnSet").onclick=openSettings; el("btnAct").onclick=openActivity; el("hub").onclick=toggleCmd;
+el("btnSet").onclick=openSettings; el("btnAct").onclick=openActivity; el("hub").onclick=function(){ if(typeof openBrain==="function") openBrain(); else toggleCmd(); };   // aic-v65: nút AI mở bộ não (Hôm nay + hỏi đáp)
 
 /* ---------- khởi động ---------- */
 el("logo").innerHTML=svg("spark"); el("btnSet").innerHTML=svg("gear"); el("btnAct").insertAdjacentHTML("afterbegin",svg("clock")); el("btnMic").innerHTML=svg("mic"); el("btnGo").innerHTML=svg("send"); el("installBox").innerHTML=svg("download");
@@ -1411,5 +1416,6 @@ document.addEventListener("visibilitychange",function(){ if(!document.hidden){ p
 <script src="congno.js"></script>
 <script src="vntk.js"></script>
 <script src="tttt.js"></script>
+<script src="brain.js"></script>
 </body>
 </html>

@@ -507,10 +507,32 @@
      → không nói, báo lại sau (đúng chu kỳ nhắc). Không bấm → đọc các việc cần làm. */
   var VO_WAIT = 5;
   function voKnock() {
+    /* Tiếng gõ cửa gỗ TO + RÕ: loa điện thoại không phát được tiếng trầm <200Hz nên dùng dải 400–1500Hz
+       (cú nện thân gỗ + tiếng "cốc" sắc + nhiễu ngắn), mỗi lần gõ 2 nhịp sát nhau, qua bộ nén để to hết cỡ. */
     try {
       var AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) { var c = new AC(); [0, 0.45, 0.9].forEach(function (t) { var o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(170, c.currentTime + t); o.frequency.exponentialRampToValueAtTime(70, c.currentTime + t + 0.12); g.gain.setValueAtTime(0.0001, c.currentTime + t); g.gain.exponentialRampToValueAtTime(0.9, c.currentTime + t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + t + 0.16); o.connect(g); g.connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + 0.2); }); setTimeout(function () { try { c.close(); } catch (e) {} }, 1500); }
-      if (navigator.vibrate) navigator.vibrate([80, 370, 80, 370, 80]);
+      if (AC) {
+        var c = new AC(); if (c.resume) c.resume();
+        var cp = c.createDynamicsCompressor(); cp.threshold.value = -24; cp.ratio.value = 12;
+        var mg = c.createGain(); mg.gain.value = 1.6; cp.connect(mg); mg.connect(c.destination);
+        var nb = c.createBuffer(1, Math.floor(c.sampleRate * 0.06), c.sampleRate), nd = nb.getChannelData(0);
+        for (var k = 0; k < nd.length; k++) nd[k] = (Math.random() * 2 - 1) * (1 - k / nd.length);
+        var hit = function (t, vol) {
+          var t0 = c.currentTime + t;
+          [[420, 230, 0.16], [1250, 700, 0.07]].forEach(function (f) {      // thân gỗ + tiếng "cốc"
+            var o = c.createOscillator(), g = c.createGain(); o.type = "triangle";
+            o.frequency.setValueAtTime(f[0], t0); o.frequency.exponentialRampToValueAtTime(f[1], t0 + f[2]);
+            g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + f[2] + 0.05);
+            o.connect(g); g.connect(cp); o.start(t0); o.stop(t0 + f[2] + 0.08);
+          });
+          var ns = c.createBufferSource(), bp = c.createBiquadFilter(), ng = c.createGain();   // tiếng "cạch" lúc chạm
+          ns.buffer = nb; bp.type = "bandpass"; bp.frequency.value = 1800; bp.Q.value = 0.8; ng.gain.value = vol * 0.9;
+          ns.connect(bp); bp.connect(ng); ng.connect(cp); ns.start(t0);
+        };
+        [0, 0.6, 1.2].forEach(function (t) { hit(t, 1); hit(t + 0.11, 0.8); });   // 3 lần gõ, mỗi lần 2 nhịp "cốc-cốc"
+        setTimeout(function () { try { c.close(); } catch (e) {} }, 2500);
+      }
+      if (navigator.vibrate) navigator.vibrate([200, 400, 200, 400, 200]);
     } catch (e) {}
   }
   function voVoice(list, demo) {
@@ -522,7 +544,7 @@
       document.removeEventListener("visibilitychange", h);
       if (hid || document.hidden) { if (!demo) VO.last = Date.now(); return; }   // bấm nguồn = bận → báo lại sau
       voSay(list);
-    }, 1400 + VO_WAIT * 1000);
+    }, 1900 + VO_WAIT * 1000);
     if (demo) toast("🚪 Gõ cửa 3 lần… bấm nút nguồn trong " + VO_WAIT + " giây = bận (không nói); không bấm = đọc việc");
   }
   /* Chế độ nhắc: voice = đọc to · bell = chuông · vibe = rung + nhấp nháy · quiet = chỉ nhấp nháy.

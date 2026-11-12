@@ -1,4 +1,4 @@
-/* MY ViO – TRỢ LÝ CÁ NHÂN (myvio.js, aic-v68, 12/11/2026)
+/* MY ViO – TRỢ LÝ CÁ NHÂN (myvio.js, aic-v72, 13/11/2026)
    Việc cần làm + nhắc việc (trong app), Theo dõi bám đuổi, Ghi chú nhanh, Việc tự sinh từ dữ liệu (khách sắp hết hạn, khách còn nợ).
    Backend: MyVio.gs (mv.list, mv.save, mv.done, mv.note_save, mv.note_del) – lưu tab MYVIO_VIEC, MYVIO_GHICHU trong Sheet AI_CONTROL.
    Thêm nhanh bằng câu thường: "gọi Hải Vân 9h thứ 6", "nộp báo cáo ngày 25 gấp", "nhắc nợ hằng tháng ngày 5", "theo dõi báo giá Cty X 3 ngày nữa". */
@@ -118,6 +118,7 @@
     return { od: od, td: td };
   }
   function badge() {
+    if (window.mvVoRefresh) window.mvVoRefresh();
     var nd = el("nd_my_vio"); if (!nd) return; var c = counts(), n = c.od + c.td, b = nd.querySelector(".mvb");
     if (!n) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement("span"); b.className = "mvb"; nd.appendChild(b); } b.textContent = n > 99 ? "99+" : n;
@@ -204,6 +205,7 @@
     if (M.tab === "hom_nay") {
       var c = counts(), wk = M.viec.filter(function (v) { var d = dayDiff(v.han); return d != null && d > 0 && d <= 7; }).length;
       h += '<div class="mvsum"><div class="' + (c.od ? "red" : "") + '"><b>' + c.od + "</b><small>Quá hạn</small></div><div><b>" + c.td + "</b><small>Hôm nay</small></div><div><b>" + wk + "</b><small>7 ngày tới</small></div></div>";
+      h += '<div class="mvvoice"><button type="button" data-vo="1">' + (VO.on ? "🔔 Nhắc việc: BẬT" : "🔕 Nhắc việc: TẮT") + '</button><button type="button" data-vi="1">Lặp mỗi ' + VO.min + ' phút</button><button type="button" data-vh="1" class="' + (voMeeting() ? "sel" : "") + '">🤫 ' + (voMeeting() ? "Đang họp (còn " + Math.ceil((VO.meet - Date.now()) / 60000) + "')" : "Họp 60 phút") + '</button><div class="vm">' + VO_MODES.map(function (m) { return '<button type="button" data-vm="' + m[0] + '" class="' + (VO.mode === m[0] ? "sel" : "") + '">' + m[1] + "</button>"; }).join("") + '</div><small>Bấm 1 kiểu để thử ngay. Họp/chỗ đông người: chọn 📳 Rung hoặc 🔕 Im lặng, hoặc bấm 🤫 Họp 60 phút (tự trở lại sau 1 giờ). Nhắc lặp tới khi bấm xong hoặc Hoãn 30 phút · yên lặng 22h–6h · chỉ khi app đang mở · iPhone không hỗ trợ rung</small></div>';
       var hn = M.viec.filter(function (v) { var d = dayDiff(v.han); return d != null && d <= 0; });
       h += hn.length ? groupHtml(hn) : '<div class="mvempty">Hôm nay chưa có việc đến hạn. 👍</div>';
       var st = M.viec.filter(function (v) { var d = dayDiff(v.han); return d != null && d > 0 && d <= 7; }).sort(sortV);
@@ -239,6 +241,7 @@
   function onBody(e) {
     var t = e.target.closest("button,[data-ed],[data-cte],[data-gv]"); if (!t) return;
     var a = t.dataset;
+    if (a.vo != null || a.vi != null || a.vm != null || a.vh != null) { voClick(a); return; }   // nút giọng nói
     if (a.ck) {   // đánh dấu xong (lạc quan, lỗi thì hoàn lại)
       var v = find(a.ck); if (!v) return; t.classList.add("on"); t.textContent = "✓";
       setTimeout(function () { M.viec = M.viec.filter(function (x) { return x.id !== v.id; }); v.trang_thai = "xong"; v.xong_luc = "vừa xong"; M.xong.unshift(v); saveCache(); badge(); render(); }, 250);
@@ -452,6 +455,109 @@
       try { rec.start(); } catch (e) { b.classList.remove("rec"); rec = null; }
     };
   }
+
+  /* ---------------- Nhắc bằng giọng nói – lớp A (khi app đang mở) ----------------
+     Việc đến hạn mà chưa bấm xong: thanh nhắc ở đầu màn hình + đọc to tiếng Việt, lặp mỗi N phút.
+     Bấm ✓ Xong thì ngừng; "Hoãn 30'" tạm ngừng 30 phút. Yên lặng 22h–6h. */
+  var VO = { on: lsGet("mv_vo_on") !== "0", min: +lsGet("mv_vo_min") || 10, last: 0, sn: {}, act: false, mode: lsGet("mv_vo_mode") || "voice", meet: +lsGet("mv_vo_meet") || 0 };
+  try { VO.sn = JSON.parse(lsGet("mv_vo_sn") || "{}") || {}; } catch (e) { VO.sn = {}; }
+  var VO_SNOOZE = 30, VO_MINS = [5, 10, 15, 30];
+  var vstl = document.createElement("style");
+  vstl.textContent = ".mvvoice{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}.mvvoice button{border:1px solid #C25E00;color:#C25E00;background:#fff;border-radius:99px;padding:6px 12px;font-size:13px;font-weight:600}.mvvoice small{flex-basis:100%;color:#6b7280;font-size:11px}" +
+    ".mvvoice button.sel{background:#C25E00;color:#fff}.mvvoice .vm{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}#mvFlash{position:fixed;left:0;right:0;top:0;height:10px;z-index:100000;background:#D9534F;animation:mvfl .5s ease-in-out 6 alternate;pointer-events:none}@keyframes mvfl{from{opacity:0}to{opacity:1}}" +
+    "#mvVoBar{position:fixed;left:0;right:0;top:0;z-index:99999;background:#FFF4E5;border-bottom:2px solid #C25E00;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 8px;box-shadow:0 2px 8px rgba(0,0,0,.2);font-size:14px;color:#222}" +
+    "#mvVoBar .vh{display:flex;gap:6px;align-items:center;font-weight:700;color:#C25E00;margin-bottom:4px}#mvVoBar .vh span{flex:1}" +
+    "#mvVoBar .vr{display:flex;gap:6px;align-items:center;padding:4px 0;border-top:1px solid #F3D9B8}#mvVoBar .vr b{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis}#mvVoBar .vr small{display:block;font-weight:400;color:#6b7280}" +
+    "#mvVoBar button{border:1px solid #C25E00;background:#fff;color:#C25E00;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700}#mvVoBar button.ok{background:#1E7B4F;border-color:#1E7B4F;color:#fff}";
+  document.head.appendChild(vstl);
+  function voSave() { try { lsSet("mv_vo_sn", JSON.stringify(VO.sn)); } catch (e) {} }
+  /* Thời điểm đến hạn: có giờ → đúng giờ; chỉ có ngày → 08:00 sáng hôm đó */
+  function dueAt(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(v.han || ""); if (!m) return null;
+    return new Date(+m[1], +m[2] - 1, +m[3], m[4] ? +m[4] : 8, m[5] ? +m[5] : 0).getTime();
+  }
+  function voDue() {
+    var now = Date.now();
+    return M.viec.filter(function (v) { var d = dueAt(v); return d != null && d <= now && !(VO.sn[v.id] > now); }).sort(function (a, b) { return dueAt(a) - dueAt(b); });
+  }
+  function voQuiet() { var h = new Date().getHours(); return h >= 22 || h < 6; }
+  function voBeep() {
+    try { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; var c = new AC(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(c.destination); o.start(); setTimeout(function () { o.stop(); c.close(); }, 250); } catch (e) {}
+  }
+  function voSay(list) {
+    voBeep();
+    setTimeout(function () {
+      try {
+        var ss = window.speechSynthesis; if (!ss || !list.length) return; ss.cancel();
+        var names = list.slice(0, 3).map(function (v) { return v.tieu_de; });
+        var u = new SpeechSynthesisUtterance("Nhắc việc. Anh có " + list.length + " việc đến hạn: " + names.join(". ") + (list.length > 3 ? ". Và " + (list.length - 3) + " việc nữa." : ".") + " Bấm xong để tắt nhắc.");
+        u.lang = "vi-VN"; u.rate = 0.95; var vs = ss.getVoices() || [];
+        for (var i = 0; i < vs.length; i++) if (/^vi/i.test(vs[i].lang)) { u.voice = vs[i]; break; }
+        ss.speak(u);
+      } catch (e) {}
+    }, 400);
+  }
+  /* Chế độ nhắc: voice = đọc to · bell = chuông · vibe = rung + nhấp nháy · quiet = chỉ nhấp nháy.
+     "Họp 60 phút" = tạm chuyển sang rung (không tiếng) rồi tự trở về chế độ đã chọn. */
+  var VO_MODES = [["voice", "🔊 Giọng nói"], ["bell", "🔔 Chuông"], ["vibe", "📳 Rung"], ["quiet", "🔕 Im lặng"]];
+  function voMeeting() { return VO.meet > Date.now(); }
+  function voMode() { return voMeeting() ? "vibe" : VO.mode; }
+  function voFlash() { var f = document.getElementById("mvFlash"); if (f) f.remove(); f = document.createElement("div"); f.id = "mvFlash"; document.body.appendChild(f); setTimeout(function () { f.remove(); }, 3200); }
+  function voAlert(list, mode) {
+    mode = mode || voMode();
+    if (mode === "voice") { voSay(list); return; }
+    if (mode === "bell") { voBeep(); setTimeout(voBeep, 350); setTimeout(voBeep, 700); return; }
+    voFlash();   // rung / im lặng: nhấp nháy thanh đầu màn hình
+    if (mode === "vibe") { try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {} }
+  }
+  function voActive() { return navigator.userActivation ? navigator.userActivation.hasBeenActive : VO.act; }
+  /* Thanh nhắc ở đầu màn hình: còn việc đến hạn chưa xong/chưa hoãn thì còn hiện */
+  function voBanner() {
+    var bar = document.getElementById("mvVoBar"), d = VO.on && connected() ? voDue() : [];
+    if (!d.length) { if (bar) bar.remove(); return; }
+    if (!bar) { bar = document.createElement("div"); bar.id = "mvVoBar"; bar.onclick = voBar; document.body.appendChild(bar); }
+    var h = '<div class="vh"><span>🔔 Việc đến hạn (' + d.length + ')' + (voActive() ? "" : " · chạm màn hình để bật tiếng") + '</span><button type="button" data-bh="1">' + (voMeeting() ? "🤫 Đang họp" : "🤫 Họp") + '</button><button type="button" data-bv="1">▶</button><button type="button" data-bo="1">Mở</button></div>';
+    d.slice(0, 3).forEach(function (v) { h += '<div class="vr"><b>' + esc(v.tieu_de) + "<small>" + esc(hanLabel(v.han)) + (v.khach ? " · " + esc(v.khach) : "") + '</small></b><button type="button" class="ok" data-bd="' + esc(v.id) + '">✓ Xong</button><button type="button" data-bs="' + esc(v.id) + '">Hoãn 30\'</button></div>'; });
+    if (d.length > 3) h += '<div class="vr"><b>… và ' + (d.length - 3) + " việc nữa</b></div>";
+    bar.innerHTML = h;
+  }
+  function voQuickDone(id) {
+    var v = find(id); if (!v) return;
+    M.viec = M.viec.filter(function (x) { return x.id !== v.id; }); v.trang_thai = "xong"; v.xong_luc = "vừa xong"; M.xong.unshift(v); saveCache(); badge(); render();
+    api("mv.done", { id: v.id, xong: true }).then(function (r) { if (r.tiep) { upsert(r.tiep); render(); toast("Xong · đã tạo lần tiếp: " + hanLabel(r.tiep.han)); } else toast("Đã xong"); })
+      .catch(function (err) { toast("Lỗi: " + err.message); load(false); });
+  }
+  function voBar(e) {
+    var b = e.target.closest("button"); if (!b) return; var a = b.dataset;
+    if (a.bd) voQuickDone(a.bd);
+    else if (a.bs) { VO.sn[a.bs] = Date.now() + VO_SNOOZE * 60000; voSave(); try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (x) {} voBanner(); toast("Hoãn " + VO_SNOOZE + " phút"); }
+    else if (a.bo) { if (window.openMyVio) window.openMyVio("hom_nay"); }
+    else if (a.bh) { voMeetToggle(); voBanner(); render(); }
+    else if (a.bv) voAlert(voDue());
+  }
+  function voMeetToggle() {
+    VO.meet = voMeeting() ? 0 : Date.now() + 60 * 60000; try { lsSet("mv_vo_meet", String(VO.meet)); } catch (e) {}
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+    toast(voMeeting() ? "🤫 Chế độ họp 60 phút: chỉ rung + nhấp nháy, không tiếng" : "Đã tắt chế độ họp");
+  }
+  function voClick(a) {
+    if (a.vo != null) { VO.on = !VO.on; try { lsSet("mv_vo_on", VO.on ? "1" : "0"); } catch (e) {} if (!VO.on) try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+    else if (a.vi != null) { VO.min = VO_MINS[(VO_MINS.indexOf(VO.min) + 1) % VO_MINS.length]; try { lsSet("mv_vo_min", String(VO.min)); } catch (e) {} }
+    else if (a.vm) { VO.mode = a.vm; try { lsSet("mv_vo_mode", VO.mode); } catch (e) {} var d = voDue(); voAlert(d.length ? d : [{ tieu_de: "việc thử nhắc" }], VO.mode); toast("Thử: " + VO_MODES.filter(function (m) { return m[0] === a.vm; })[0][1]); }
+    else if (a.vh != null) voMeetToggle();
+    voBanner(); render();
+  }
+  function voTick() {
+    voBanner();
+    if (!VO.on || !connected() || voQuiet() || document.hidden || !voActive()) return;
+    var d = voDue(); if (!d.length) return;
+    var now = Date.now(); if (now - VO.last < VO.min * 60000) return;
+    VO.last = now; voAlert(d);
+  }
+  window.mvVoRefresh = voBanner;
+  setInterval(voTick, 30000);
+  document.addEventListener("pointerdown", function () { VO.act = true; setTimeout(voTick, 400); }, { once: true });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) voTick(); });
 
   /* Khởi động: số đỏ trên nút My ViO + nhắc 1 lần mỗi ngày khi mở app (chỉ trong app, theo lựa chọn của anh) */
   setTimeout(function () {

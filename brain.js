@@ -1,4 +1,4 @@
-/* BỘ NÃO – nút "AI" trung tâm (brain.js, aic-v65, 12/11/2026)
+/* BỘ NÃO – nút "AI" trung tâm (brain.js, aic-v66, 12/11/2026)
    Bấm nút AI → màn "Hôm nay" (brain.today, không dùng AI) + ô hỏi/ra lệnh (brain.ask: AI gọi tool đọc dữ liệu,
    tra Internet, và chuẩn bị lệnh cho các node). Việc ghi/gửi: chỉ hiện nút mở form node đã điền sẵn – anh tự bấm Gửi.
    Backend: Brain.gs. Lỗi bộ não → quay về cách cũ (legacyCmd: ai.parse / tra công nợ). */
@@ -106,20 +106,29 @@
     var w = el("brWait") || c.lastElementChild; if (w && w.scrollIntoView) w.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
+  var BR_TIMEOUT = 75;   // giây: Gemini quá tải thì không bắt anh chờ mãi
   function send(text) {
     if (B.busy) return; if (!connected()) { toast("Cần kết nối backend (Cài đặt)"); return; }
     var hist = B.hist.slice(-6).map(function (m) { return { r: m.r, t: m.t }; });
     B.hist.push({ r: "u", t: text }); B.busy = true; renderChat();
+    var t0 = Date.now(), done = false;
+    var tick = setInterval(function () { var w = el("brWait"); if (w) w.textContent = "Đang suy nghĩ… " + Math.round((Date.now() - t0) / 1000) + " giây"; }, 1000);
+    var finish = function (msg) { if (done) return false; done = true; clearInterval(tick); B.busy = false; if (msg) { B.hist.push(msg); renderChat(); } return true; };
+    var isDebt = /^[\d\s\-]{9,}$/.test(text) || (/(^|[\s,.?!:;])nợ($|[\s,.?!:;])/i.test(text) && !/nhắc|gửi|mail|zalo/i.test(text));
+    var timer = setTimeout(function () {
+      if (!finish({ r: "a", t: "Gemini đang chậm hoặc quá tải (đã chờ " + BR_TIMEOUT + " giây). Anh thử lại sau ít phút. Số liệu ở bảng Hôm nay vẫn xem được bình thường." + (isDebt ? "\nTôi tra công nợ trực tiếp (không cần Gemini)…" : "") })) return;
+      if (isDebt && typeof cnTra === "function") setTimeout(function () { cnTra(text); }, 600);
+    }, BR_TIMEOUT * 1000);
     api("brain.ask", { text: text, hist: hist }).then(function (r) {
-      B.busy = false;
-      B.hist.push({ r: "a", t: r.tra_loi || "", act: r.hanh_dong || [], src: r.nguon || [], steps: r.buoc || [] });
-      renderChat();
+      clearTimeout(timer);
+      if (!finish({ r: "a", t: r.tra_loi || "", act: r.hanh_dong || [], src: r.nguon || [], steps: r.buoc || [] })) return;
       // Chỉ 1 việc cần mở và AI không hỏi lại gì → mở luôn form đã điền sẵn (anh vẫn phải tự bấm Gửi)
       var a = r.hanh_dong || []; if (a.length === 1 && !/\?\s*$/.test(r.tra_loi || "")) setTimeout(function () { openNode(a[0]); }, 900);
     }).catch(function (err) {
-      B.busy = false;
-      B.hist.push({ r: "a", t: "Bộ não đang lỗi (" + err.message + "). Tôi chuyển sang cách cũ." }); renderChat();
-      if (typeof legacyCmd === "function") setTimeout(function () { legacyCmd(text); }, 600);
+      clearTimeout(timer);
+      if (!finish({ r: "a", t: "Bộ não đang lỗi (" + err.message + ")." + (isDebt ? " Tôi tra công nợ trực tiếp." : " Anh thử lại sau ít phút.") })) return;
+      if (isDebt && typeof cnTra === "function") setTimeout(function () { cnTra(text); }, 600);
+      else if (/không hợp lệ/i.test(err.message) && typeof legacyCmd === "function") setTimeout(function () { legacyCmd(text); }, 600);   // backend chưa có Brain.gs → cách cũ
     });
   }
 

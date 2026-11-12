@@ -1164,7 +1164,7 @@ function legacyCmd(v){
   if(!connected()){ toast("Cần kết nối backend (Cài đặt) để dịch lệnh"); return; }
   if(/^[\d\s\-]{9,}$/.test(v)){ cnTra(v); return; }   // chỉ gõ MST → tra công nợ ngay, khỏi qua Gemini
   // Câu hỏi về nợ ("… còn nợ bao nhiêu") → tra thẳng, không cần Gemini (tránh lỗi 503). Lệnh nhắc/gửi mail vẫn đi qua Gemini.
-  if(/\bnợ\b/i.test(v) && !/nhắc|gửi|mail|zalo/i.test(v)){ cnTra(v); return; }
+  if(/(^|[\s,.?!:;])nợ($|[\s,.?!:;])/i.test(v) && !/nhắc|gửi|mail|zalo/i.test(v)){ cnTra(v); return; }
   el("cmdHint").textContent="Đang dịch lệnh…";
   api("ai.parse",{text:v}).then(function(r){
     var p=r.parsed||{}, t=toolById(p.tool);

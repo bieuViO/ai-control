@@ -1,4 +1,4 @@
-/* BỘ NÃO – nút "AI" trung tâm (brain.js, aic-v67, 12/11/2026)
+/* BỘ NÃO – nút "AI" trung tâm (brain.js, aic-v68, 12/11/2026)
    Bấm nút AI → màn "Hôm nay" (brain.today, không dùng AI) + ô hỏi/ra lệnh (brain.ask: AI gọi tool đọc dữ liệu,
    tra Internet, và chuẩn bị lệnh cho các node). Việc ghi/gửi: chỉ hiện nút mở form node đã điền sẵn – anh tự bấm Gửi.
    Backend: Brain.gs. Lỗi bộ não → quay về cách cũ (legacyCmd: ai.parse / tra công nợ). */
@@ -27,7 +27,7 @@
   document.head.appendChild(stl);
 
   var B = { hist: [], today: null, busy: false };       // hist: [{r:'u'|'a', t}] – nhớ ngữ cảnh trong phiên
-  var SUG = ["Hôm nay có việc gì cần làm?", "Tổng nợ còn bao nhiêu?", "Khách nào sắp hết hạn?", "Doanh thu tháng này?", "Báo giá VAN 100 cho MST "];
+  var SUG = ["Hôm nay có việc gì cần làm?", "Việc của tôi hôm nay", "Nhắc tôi ", "Tổng nợ còn bao nhiêu?", "Khách nào sắp hết hạn?", "Doanh thu tháng này?", "Báo giá VAN 100 cho MST "];
   function money(n) { return fmtMoney(Math.round(n || 0)) + " đ"; }
   function tr(n) { n = Math.round(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",").replace(/,0$/, "") + " tr" : fmtMoney(n); }
   function nodeName(id) { var t = toolById(id); return t ? t.name : id; }
@@ -47,7 +47,7 @@
     renderChat();
     el("brSug").onclick = function (e) {
       var b = e.target.closest("[data-s]"); if (!b) return; var s = SUG[+b.getAttribute("data-s")];
-      if (/MST $/.test(s)) { el("brIn").value = s; el("brIn").focus(); } else send(s);
+      if (/(MST|tôi) $/.test(s)) { el("brIn").value = s; el("brIn").focus(); } else send(s);
     };
     el("brForm").onsubmit = function (e) { e.preventDefault(); var v = el("brIn").value.trim(); if (v) { el("brIn").value = ""; send(v); } };
     wireMic();
@@ -112,6 +112,32 @@
   function say(text, t, act) { B.hist.push({ r: "u", t: text }); B.hist.push({ r: "a", t: t, act: act || [], steps: ["lệnh nhanh"] }); renderChat(); }
   function quick(text) {
     var n = nz(text), m, T = B.today || {};
+    // 0) My ViO: "nhắc tôi …", "thêm việc …", "theo dõi …" → tạo việc; "ghi chú: …" → ghi chú; "việc của tôi / hôm nay tôi có việc gì" → đọc
+    if (typeof window.mvAdd === "function") {
+      if ((m = n.match(/^(?:ghi chu|ghi lai|note)\s*[:\-]?\s+(.+)$/))) {
+        var nt = text.trim().replace(/^(ghi\s+ch[uú]|ghi\s+l[aạ]i|note)\s*[:\-]?\s*/i, "");
+        say(text, "Đang lưu ghi chú…");
+        window.mvNote(nt).then(function () { B.hist[B.hist.length - 1].t = "Đã lưu ghi chú: “" + nt + "”."; B.hist[B.hist.length - 1].act = [{ type: "mo_node", node: "my_vio", params: {} }]; renderChat(); })
+          .catch(function (e) { B.hist[B.hist.length - 1].t = "Lỗi lưu ghi chú: " + e.message; renderChat(); });
+        return true;
+      }
+      if (/^(nhac (toi|anh|em|minh)|them viec|tao viec|viec\s*:|theo doi\s)/.test(n)) {
+        say(text, "Đang thêm vào My ViO…");
+        window.mvAdd(text).then(function (r) {
+          var v = r.viec, lb = v.han ? v.han.split(" ").reverse().join(" ") : "không hạn";
+          B.hist[B.hist.length - 1].t = "Đã thêm " + (v.loai === "theo_doi" ? "theo dõi" : "việc") + ": **" + v.tieu_de + "** – hạn " + lb + (v.lap ? " (lặp " + { ngay: "hằng ngày", tuan: "hằng tuần", thang: "hằng tháng" }[v.lap] + ")" : "") + ". Nhắc trong app (số đỏ trên nút My ViO).";
+          B.hist[B.hist.length - 1].act = [{ type: "mo_node", node: "my_vio", params: {} }]; renderChat();
+        }).catch(function (e) { B.hist[B.hist.length - 1].t = "Lỗi thêm việc: " + e.message; renderChat(); });
+        return true;
+      }
+      if (/(viec cua toi|toi co viec gi|viec hom nay|viec can lam|qua han)/.test(n) && window.mvData) {
+        var D = window.mvData(), now = new Date(), t0 = new Date(); t0.setHours(0, 0, 0, 0);
+        var due = function (v) { var mm = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(v.han || ""); return mm ? new Date(+mm[1], +mm[2] - 1, +mm[3], mm[4] ? +mm[4] : 23, mm[5] ? +mm[5] : 59) : null; };
+        var qh = D.viec.filter(function (v) { var d = due(v); return d && d < now; }), hn = D.viec.filter(function (v) { var d = due(v); return d && d >= now && d < new Date(t0.getTime() + 864e5); });
+        say(text, "My ViO – " + qh.length + " việc quá hạn, " + hn.length + " việc hôm nay:" + qh.concat(hn).slice(0, 10).map(function (v) { return "\n• " + (due(v) < now ? "❗ " : "") + v.tieu_de + (v.han.indexOf(" ") > 0 ? " (" + v.han.split(" ")[1] + ")" : ""); }).join("") + (D.viec.length ? "" : "\nChưa có việc nào."), [{ type: "mo_node", node: "my_vio", params: {} }]);
+        return true;
+      }
+    }
     // 1) Mở / tìm thư mục, file, hồ sơ trên máy tính → My Computer tìm sẵn
     m = n.match(/^(?:mo|tim|lay|xem|kiem)\s+(?:(?:cai|giup|cho|toi|anh)\s+)*(?:folder|thu muc|file|tep|ho so|tai lieu)\s+(.+)$/) ||
         n.match(/^(?:mo|tim|lay)\s+(.+?)\s+(?:folder|thu muc)$/);
@@ -138,7 +164,10 @@
     }
     if (/hom nay|viec gi|can lam/.test(n) && T.he_thong) {
       var ht = T.he_thong, cn = T.cong_no || {}, hh = T.het_han || {};
-      say(text, "Hôm nay:\n• Chờ anh xác nhận: " + (ht.cho_xac_nhan || []).length + " lệnh\n• Lệnh lỗi 24h: " + (ht.loi_24h || []).length + "\n• Nợ còn lại: " + fmtMoney(cn.tong_con_no || 0) + " đ (" + (cn.so_khach_no || 0) + " khách)\n• Sắp hết hạn 30 ngày: " + (hh.tong || 0) + " (" + (hh.da_het_han || 0) + " đã quá hạn)\nXem chi tiết ở bảng phía trên."); return true;
+      var mvc = ""; if (window.mvData) { var MD = window.mvData(), nw = new Date(); var dueN = function (v) { var mm = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(v.han || ""); return mm ? new Date(+mm[1], +mm[2] - 1, +mm[3], mm[4] ? +mm[4] : 23, mm[5] ? +mm[5] : 59) : null; };
+        var e0 = new Date(); e0.setHours(23, 59, 59, 999); var qh2 = MD.viec.filter(function (v) { var d = dueN(v); return d && d < nw; }).length, hn2 = MD.viec.filter(function (v) { var d = dueN(v); return d && d >= nw && d <= e0; }).length;
+        mvc = "\n• My ViO: " + hn2 + " việc hôm nay, " + qh2 + " quá hạn"; }
+      say(text, "Hôm nay:" + mvc + "\n• Chờ anh xác nhận: " + (ht.cho_xac_nhan || []).length + " lệnh\n• Lệnh lỗi 24h: " + (ht.loi_24h || []).length + "\n• Nợ còn lại: " + fmtMoney(cn.tong_con_no || 0) + " đ (" + (cn.so_khach_no || 0) + " khách)\n• Sắp hết hạn 30 ngày: " + (hh.tong || 0) + " (" + (hh.da_het_han || 0) + " đã quá hạn)\nXem chi tiết ở bảng phía trên."); return true;
     }
     // 4) Nhắc nợ
     if (/nhac no/.test(n)) {

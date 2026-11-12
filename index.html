@@ -232,7 +232,8 @@ var IC = {
   link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   sale:'<path d="M4 5h16v11H10l-4 4v-4H4z"/><path d="M12 7.5l.9 2.2 2.1.8-2.1.8-.9 2.2-.9-2.2-2.1-.8 2.1-.8z"/>',   /* AI Bán Hàng */
   call:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
-  chat:'<path d="M4 5h16v11H10l-4 4v-4H4z"/>'
+  chat:'<path d="M4 5h16v11H10l-4 4v-4H4z"/>',
+  vio:'<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6.2l1.5 1.5L7.8 5M3.5 12.2l1.5 1.5L7.8 11"/><circle cx="5.2" cy="18" r="1.4"/>'
 };
 function svg(n){ return '<svg viewBox="0 0 24 24">'+(IC[n]||IC.chip)+'</svg>'; }
 
@@ -328,7 +329,9 @@ var TOOLS = [
   {id:"bc_doanh_thu", parent:"invoice_kh", doanhthu:true, short:"Doanh thu", name:"Doanh thu", sub:"Doanh thu từng khách hàng, theo tháng", icon:"chart", ready:true, risk:"R0"},
   {id:"bc_cong_no", parent:"invoice_kh", congno:true, short:"Công nợ theo tháng", name:"Công nợ theo tháng", sub:"Tổng nợ còn lại theo từng tháng", icon:"chart", ready:true, risk:"R0"},
   {id:"trinh_ky", parent:"hop_dong_web", short:"Trình ký", name:"Chuyển trình hàng loạt", sub:"Chuyển trình và tải PDF hợp đồng", icon:"send", ready:false},
-  {id:"ca_plugin", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},
+  /* My ViO (aic-v68, 12/11/2026): trợ lý cá nhân – việc cần làm, nhắc việc, theo dõi, ghi chú (myvio.js, backend MyVio.gs). Thay chỗ CA Plugin trên vòng ngoài. */
+  {id:"my_vio", myvio:true, short:"My ViO", name:"My ViO – Trợ lý cá nhân", sub:"Việc cần làm, nhắc việc, theo dõi, ghi chú", icon:"vio", ready:true, risk:"R0"},
+  {id:"ca_plugin", parent:"my_tool", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},
   /* Auto FB (thay HĐ Word 30/10/2026): duyệt + đăng bài Fanpage VNPT CHƠN THÀNH. Backend: AutoFB.gs (fb.list / fb.set / fb.post / fb.new) + Make B2 đăng bài. */
   {id:"auto_fb", autofb:true, short:"Auto FB", name:"Auto FB – Fanpage VNPT", sub:"Duyệt, đăng bài Fanpage VNPT CHƠN THÀNH", icon:"share", ready:true, risk:"R1"},
   /* AI Bán Hàng (sales.js): đọc/ghi Sheet "AI Bán Hàng – VNPT Chơn Thành" qua backend (action sheet.*). */
@@ -337,7 +340,7 @@ var TOOLS = [
   {id:"hd_word", parent:"hop_dong_web", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false},
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
   /* My Tool: sẽ liên kết sau (đổi ready:true khi nối). Vòng ngoài hiện 9 nút, không vẽ đường nối, chấm xanh = đã kết nối. */
-  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Công cụ cá nhân: PDF hóa đơn", icon:"chip", ready:true},
+  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Công cụ cá nhân: PDF hóa đơn, CA Plugin", icon:"chip", ready:true},
   {id:"my_google", short:"My Google", name:"My Google", sub:"Mở nhanh Drive, Gmail, Lịch, Sheet, Docs, Meet", icon:"globe", ready:true, ring:"out", risk:"R0",
    links:[
     {t:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app", icon:"users", act:"khach"},   /* mở sheets.js, không rời app */
@@ -426,6 +429,8 @@ function loadLay(){
   l=l||{}; LAY={"in":l["in"]||[],"out":l.out||[],rIn:+l.rIn||0,rOut:+l.rOut||0};
   // aic-v48: AI Bán Hàng nằm đúng chỗ cũ của HĐ Word (HĐ Word đã chuyển vào trong nút Hợp đồng)
   if(LAY.out.indexOf("ai_ban_hang")<0) LAY.out=LAY.out.map(function(id){ return id==="hd_word"?"ai_ban_hang":id; });
+  // aic-v68: My ViO nằm đúng chỗ cũ của CA Plugin (CA Plugin chuyển vào trong My Tool)
+  if(LAY.out.indexOf("my_vio")<0) LAY.out=LAY.out.map(function(id){ return id==="ca_plugin"?"my_vio":id; });
   // Vòng trong CỐ ĐỊNH 5 nút (INNER_FIX). Mọi tool khác (kể cả tool mới) luôn nằm vòng ngoài.
   var rd=TOOLS.filter(function(t){return INNER_FIX.indexOf(t.id)>=0 && !t.parent && !t.hidden;}).map(function(t){return t.id;});
   var sn=TOOLS.filter(function(t){return INNER_FIX.indexOf(t.id)<0 && !t.parent && !t.hidden;}).map(function(t){return t.id;});
@@ -697,12 +702,14 @@ function openVnedu(t){
   el("vnClose").onclick=closeSheet;
 }
 function openTool(t, prefill, missing){
+  if(!t) return;   // aic-v68: bỏ qua phần tử data-t không phải node
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
   if(t.explorer && typeof openExplorer==="function"){ openExplorer(prefill&&prefill.q?{q:prefill.q}:{}); return; }  // màn File máy tính (explorer.js)
   if(t.group){ openGroup(t); return; }   // nút nhóm (vd Admin vnEdu): chỉ mở danh sách chức năng con
   if(t.sales){ if(typeof openSales==="function") openSales(); else toast("Chưa tải được sales.js, hãy tải lại trang"); return; }   // AI Bán Hàng (sales.js)
   if(t.tttt){ if(typeof openTt==="function") openTt(); else toast("Chưa tải được tttt.js, hãy tải lại trang"); return; }   // Quản lý thanh toán (tttt.js)
   if(t.vntk){ if(typeof openVnTk==="function") openVnTk(); else toast("Chưa tải được vntk.js, hãy tải lại trang"); return; }   // Tài khoản vnEdu (vntk.js)
+  if(t.myvio){ if(typeof openMyVio==="function") openMyVio(); else toast("Chưa tải được myvio.js, hãy tải lại trang"); return; }   // My ViO (myvio.js)
   if(!t.ready){ openSoon(t); return; }
   if(t.id==="vnedu_serial" && !prefill){ openVnedu(t); return; }   // chọn tài khoản admin trường đã lưu
   if(t.support){ openSupport(); return; }
@@ -1416,6 +1423,7 @@ document.addEventListener("visibilitychange",function(){ if(!document.hidden){ p
 <script src="congno.js"></script>
 <script src="vntk.js"></script>
 <script src="tttt.js"></script>
+<script src="myvio.js"></script>
 <script src="brain.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* BỘ NÃO – nút "AI" trung tâm (brain.js, aic-v66, 12/11/2026)
+/* BỘ NÃO – nút "AI" trung tâm (brain.js, aic-v67, 12/11/2026)
    Bấm nút AI → màn "Hôm nay" (brain.today, không dùng AI) + ô hỏi/ra lệnh (brain.ask: AI gọi tool đọc dữ liệu,
    tra Internet, và chuẩn bị lệnh cho các node). Việc ghi/gửi: chỉ hiện nút mở form node đã điền sẵn – anh tự bấm Gửi.
    Backend: Brain.gs. Lỗi bộ não → quay về cách cũ (legacyCmd: ai.parse / tra công nợ). */
@@ -106,9 +106,53 @@
     var w = el("brWait") || c.lastElementChild; if (w && w.scrollIntoView) w.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  var BR_TIMEOUT = 75;   // giây: Gemini quá tải thì không bắt anh chờ mãi
+  /* ---------- LỆNH NHANH: chạy ngay, KHÔNG cần Gemini (Gemini hay quá tải) ----------
+     Trả true nếu đã xử lý. Câu khác mới gửi cho bộ não (Gemini). */
+  function nz(x) { return String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().replace(/\s+/g, " ").trim(); }
+  function say(text, t, act) { B.hist.push({ r: "u", t: text }); B.hist.push({ r: "a", t: t, act: act || [], steps: ["lệnh nhanh"] }); renderChat(); }
+  function quick(text) {
+    var n = nz(text), m, T = B.today || {};
+    // 1) Mở / tìm thư mục, file, hồ sơ trên máy tính → My Computer tìm sẵn
+    m = n.match(/^(?:mo|tim|lay|xem|kiem)\s+(?:(?:cai|giup|cho|toi|anh)\s+)*(?:folder|thu muc|file|tep|ho so|tai lieu)\s+(.+)$/) ||
+        n.match(/^(?:mo|tim|lay)\s+(.+?)\s+(?:folder|thu muc)$/);
+    if (m) {
+      var ow = text.trim().split(/\s+/), nw = n.split(" "), mw = m[1].split(" "), at = 0;   // lấy lại đúng các từ gốc (giữ dấu)
+      for (var i = 0; i + mw.length <= nw.length; i++) if (nw.slice(i, i + mw.length).join(" ") === m[1]) { at = i; break; }
+      var q = ow.slice(at, at + mw.length).join(" ");
+      say(text, "Mở My Computer và tìm “" + q + "” trên máy tính (ổ D, Downloads, Desktop).", [{ type: "mo_node", node: "tim_file", params: { q: q } }]);
+      setTimeout(function () { openTool(toolById("tim_file"), { q: q }); }, 500); return true;
+    }
+    // 2) Hỏi nợ theo tên / MST → tra thẳng
+    if (/^[\d\s\-]{9,}$/.test(text) || (/(^|\s)no(\s|$|\?)/.test(n) && !/nhac|gui|mail|zalo|tong no|tat ca/.test(n))) {
+      say(text, "Tra công nợ trực tiếp…"); setTimeout(function () { cnTra(text); }, 300); return true;
+    }
+    // 3) Tổng nợ / hôm nay / hết hạn / doanh thu → trả lời từ bảng Hôm nay
+    if (/tong no|no con bao nhieu|cong no thang/.test(n) && T.cong_no) {
+      var c = T.cong_no; say(text, "Tổng nợ còn lại: **" + fmtMoney(c.tong_con_no || 0) + " đ** của " + (c.so_khach_no || 0) + " khách." + (c.top || []).slice(0, 5).map(function (x, i) { return "\n" + (i + 1) + ". " + x.khach + ": " + fmtMoney(x.con_no) + " đ"; }).join(""), [{ type: "mo_node", node: "bc_cong_no", params: {} }]); return true;
+    }
+    if (/het han|sap het|gia han/.test(n) && T.het_han) {
+      var h = T.het_han; say(text, h.tong + " dịch vụ sắp/vừa hết hạn trong 30 ngày (" + (h.da_het_han || 0) + " đã quá hạn):" + (h.danh_sach || []).slice(0, 8).map(function (x) { return "\n• " + x.khach + " – " + x.goi + " – " + (x.con_ngay < 0 ? "quá " + (-x.con_ngay) + " ngày" : "còn " + x.con_ngay + " ngày") + (x.sdt ? " – " + x.sdt : ""); }).join("")); return true;
+    }
+    if (/doanh thu/.test(n) && T.doanh_thu && !/\d{1,2}\s*\/\s*\d{4}|thang\s+\d/.test(n)) {
+      var d = T.doanh_thu; say(text, "Doanh thu " + String(d.ky || "").split("-").reverse().join("/") + ": **" + fmtMoney(d.tong_tien || 0) + " đ** từ " + (d.so_khach || 0) + " khách.", [{ type: "mo_node", node: "bc_doanh_thu", params: {} }]); return true;
+    }
+    if (/hom nay|viec gi|can lam/.test(n) && T.he_thong) {
+      var ht = T.he_thong, cn = T.cong_no || {}, hh = T.het_han || {};
+      say(text, "Hôm nay:\n• Chờ anh xác nhận: " + (ht.cho_xac_nhan || []).length + " lệnh\n• Lệnh lỗi 24h: " + (ht.loi_24h || []).length + "\n• Nợ còn lại: " + fmtMoney(cn.tong_con_no || 0) + " đ (" + (cn.so_khach_no || 0) + " khách)\n• Sắp hết hạn 30 ngày: " + (hh.tong || 0) + " (" + (hh.da_het_han || 0) + " đã quá hạn)\nXem chi tiết ở bảng phía trên."); return true;
+    }
+    // 4) Nhắc nợ
+    if (/nhac no/.test(n)) {
+      var act = /gui lai/.test(n) ? "gui_lai" : (/gui|mail/.test(n) ? "gui_mail" : "tinh_hinh");
+      say(text, act === "tinh_hinh" ? "Mở Nhắc nợ – xem tình hình." : "Mở Nhắc nợ – gửi mail. Anh tick chọn khách rồi mới bấm Gửi.", [{ type: "mo_node", node: "nhac_no", params: { act: act } }]);
+      setTimeout(function () { openTool(toolById("nhac_no"), { act: act }); }, 500); return true;
+    }
+    return false;
+  }
+
+  var BR_TIMEOUT = 45;   // giây: Gemini quá tải thì không bắt anh chờ mãi
   function send(text) {
     if (B.busy) return; if (!connected()) { toast("Cần kết nối backend (Cài đặt)"); return; }
+    try { if (quick(text)) return; } catch (e) { /* lệnh nhanh lỗi → để bộ não xử lý */ }
     var hist = B.hist.slice(-6).map(function (m) { return { r: m.r, t: m.t }; });
     B.hist.push({ r: "u", t: text }); B.busy = true; renderChat();
     var t0 = Date.now(), done = false;

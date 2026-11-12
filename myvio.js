@@ -1,4 +1,4 @@
-/* MY ViO – TRỢ LÝ CÁ NHÂN (myvio.js, aic-v72, 13/11/2026)
+/* MY ViO – TRỢ LÝ CÁ NHÂN (myvio.js, aic-v73, 13/11/2026)
    Việc cần làm + nhắc việc (trong app), Theo dõi bám đuổi, Ghi chú nhanh, Việc tự sinh từ dữ liệu (khách sắp hết hạn, khách còn nợ).
    Backend: MyVio.gs (mv.list, mv.save, mv.done, mv.note_save, mv.note_del) – lưu tab MYVIO_VIEC, MYVIO_GHICHU trong Sheet AI_CONTROL.
    Thêm nhanh bằng câu thường: "gọi Hải Vân 9h thứ 6", "nộp báo cáo ngày 25 gấp", "nhắc nợ hằng tháng ngày 5", "theo dõi báo giá Cty X 3 ngày nữa". */
@@ -205,7 +205,7 @@
     if (M.tab === "hom_nay") {
       var c = counts(), wk = M.viec.filter(function (v) { var d = dayDiff(v.han); return d != null && d > 0 && d <= 7; }).length;
       h += '<div class="mvsum"><div class="' + (c.od ? "red" : "") + '"><b>' + c.od + "</b><small>Quá hạn</small></div><div><b>" + c.td + "</b><small>Hôm nay</small></div><div><b>" + wk + "</b><small>7 ngày tới</small></div></div>";
-      h += '<div class="mvvoice"><button type="button" data-vo="1">' + (VO.on ? "🔔 Nhắc việc: BẬT" : "🔕 Nhắc việc: TẮT") + '</button><button type="button" data-vi="1">Lặp mỗi ' + VO.min + ' phút</button><button type="button" data-vh="1" class="' + (voMeeting() ? "sel" : "") + '">🤫 ' + (voMeeting() ? "Đang họp (còn " + Math.ceil((VO.meet - Date.now()) / 60000) + "')" : "Họp 60 phút") + '</button><div class="vm">' + VO_MODES.map(function (m) { return '<button type="button" data-vm="' + m[0] + '" class="' + (VO.mode === m[0] ? "sel" : "") + '">' + m[1] + "</button>"; }).join("") + '</div><small>Bấm 1 kiểu để thử ngay. Họp/chỗ đông người: chọn 📳 Rung hoặc 🔕 Im lặng, hoặc bấm 🤫 Họp 60 phút (tự trở lại sau 1 giờ). Nhắc lặp tới khi bấm xong hoặc Hoãn 30 phút · yên lặng 22h–6h · chỉ khi app đang mở · iPhone không hỗ trợ rung</small></div>';
+      h += '<div class="mvvoice"><button type="button" data-vo="1">' + (VO.on ? "🔔 Nhắc việc: BẬT" : "🔕 Nhắc việc: TẮT") + '</button><button type="button" data-vi="1">Lặp mỗi ' + VO.min + ' phút</button><button type="button" data-vh="1" class="' + (voMeeting() ? "sel" : "") + '">🤫 ' + (voMeeting() ? "Đang họp (còn " + Math.ceil((VO.meet - Date.now()) / 60000) + "')" : "Họp 60 phút") + '</button><button type="button" data-vk="1" class="' + (VO.knock ? "sel" : "") + '">🚪 Gõ cửa 3 lần: ' + (VO.knock ? "BẬT" : "TẮT") + '</button><div class="vm">' + VO_MODES.map(function (m) { return '<button type="button" data-vm="' + m[0] + '" class="' + (VO.mode === m[0] ? "sel" : "") + '">' + m[1] + "</button>"; }).join("") + '</div><small>Bấm 1 kiểu để thử ngay. Kiểu 🔊 có gõ cửa 3 lần trước: bấm nút nguồn ngay = đang bận → báo lại sau; không bấm → đọc việc. Họp/chỗ đông người: chọn 📳 Rung hoặc 🔕 Im lặng, hoặc bấm 🤫 Họp 60 phút (tự trở lại sau 1 giờ). Nhắc lặp tới khi bấm xong hoặc Hoãn 30 phút · yên lặng 22h–6h · chỉ khi app đang mở · iPhone không hỗ trợ rung</small></div>';
       var hn = M.viec.filter(function (v) { var d = dayDiff(v.han); return d != null && d <= 0; });
       h += hn.length ? groupHtml(hn) : '<div class="mvempty">Hôm nay chưa có việc đến hạn. 👍</div>';
       var st = M.viec.filter(function (v) { var d = dayDiff(v.han); return d != null && d > 0 && d <= 7; }).sort(sortV);
@@ -241,7 +241,7 @@
   function onBody(e) {
     var t = e.target.closest("button,[data-ed],[data-cte],[data-gv]"); if (!t) return;
     var a = t.dataset;
-    if (a.vo != null || a.vi != null || a.vm != null || a.vh != null) { voClick(a); return; }   // nút giọng nói
+    if (a.vo != null || a.vi != null || a.vm != null || a.vh != null || a.vk != null) { voClick(a); return; }   // nút giọng nói
     if (a.ck) {   // đánh dấu xong (lạc quan, lỗi thì hoàn lại)
       var v = find(a.ck); if (!v) return; t.classList.add("on"); t.textContent = "✓";
       setTimeout(function () { M.viec = M.viec.filter(function (x) { return x.id !== v.id; }); v.trang_thai = "xong"; v.xong_luc = "vừa xong"; M.xong.unshift(v); saveCache(); badge(); render(); }, 250);
@@ -459,7 +459,7 @@
   /* ---------------- Nhắc bằng giọng nói – lớp A (khi app đang mở) ----------------
      Việc đến hạn mà chưa bấm xong: thanh nhắc ở đầu màn hình + đọc to tiếng Việt, lặp mỗi N phút.
      Bấm ✓ Xong thì ngừng; "Hoãn 30'" tạm ngừng 30 phút. Yên lặng 22h–6h. */
-  var VO = { on: lsGet("mv_vo_on") !== "0", min: +lsGet("mv_vo_min") || 10, last: 0, sn: {}, act: false, mode: lsGet("mv_vo_mode") || "voice", meet: +lsGet("mv_vo_meet") || 0 };
+  var VO = { on: lsGet("mv_vo_on") !== "0", min: +lsGet("mv_vo_min") || 10, last: 0, sn: {}, act: false, mode: lsGet("mv_vo_mode") || "voice", meet: +lsGet("mv_vo_meet") || 0, knock: lsGet("mv_vo_knock") !== "0" };
   try { VO.sn = JSON.parse(lsGet("mv_vo_sn") || "{}") || {}; } catch (e) { VO.sn = {}; }
   var VO_SNOOZE = 30, VO_MINS = [5, 10, 15, 30];
   var vstl = document.createElement("style");
@@ -497,15 +497,37 @@
       } catch (e) {}
     }, 400);
   }
+  /* Gõ cửa 3 lần trước khi nói: nếu trong ~5 giây anh bấm nút nguồn (màn hình tắt → trang bị ẩn) nghĩa là đang họp/bận
+     → không nói, báo lại sau (đúng chu kỳ nhắc). Không bấm → đọc các việc cần làm. */
+  var VO_WAIT = 5;
+  function voKnock() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) { var c = new AC(); [0, 0.45, 0.9].forEach(function (t) { var o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(170, c.currentTime + t); o.frequency.exponentialRampToValueAtTime(70, c.currentTime + t + 0.12); g.gain.setValueAtTime(0.0001, c.currentTime + t); g.gain.exponentialRampToValueAtTime(0.9, c.currentTime + t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + t + 0.16); o.connect(g); g.connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + 0.2); }); setTimeout(function () { try { c.close(); } catch (e) {} }, 1500); }
+      if (navigator.vibrate) navigator.vibrate([80, 370, 80, 370, 80]);
+    } catch (e) {}
+  }
+  function voVoice(list, demo) {
+    if (!VO.knock) { voSay(list); return; }
+    var hid = false, h = function () { if (document.hidden) hid = true; };
+    document.addEventListener("visibilitychange", h);
+    voKnock();
+    setTimeout(function () {
+      document.removeEventListener("visibilitychange", h);
+      if (hid || document.hidden) { if (!demo) VO.last = Date.now(); return; }   // bấm nguồn = bận → báo lại sau
+      voSay(list);
+    }, 1400 + VO_WAIT * 1000);
+    if (demo) toast("🚪 Gõ cửa 3 lần… bấm nút nguồn trong " + VO_WAIT + " giây = bận (không nói); không bấm = đọc việc");
+  }
   /* Chế độ nhắc: voice = đọc to · bell = chuông · vibe = rung + nhấp nháy · quiet = chỉ nhấp nháy.
      "Họp 60 phút" = tạm chuyển sang rung (không tiếng) rồi tự trở về chế độ đã chọn. */
   var VO_MODES = [["voice", "🔊 Giọng nói"], ["bell", "🔔 Chuông"], ["vibe", "📳 Rung"], ["quiet", "🔕 Im lặng"]];
   function voMeeting() { return VO.meet > Date.now(); }
   function voMode() { return voMeeting() ? "vibe" : VO.mode; }
   function voFlash() { var f = document.getElementById("mvFlash"); if (f) f.remove(); f = document.createElement("div"); f.id = "mvFlash"; document.body.appendChild(f); setTimeout(function () { f.remove(); }, 3200); }
-  function voAlert(list, mode) {
+  function voAlert(list, mode, demo) {
     mode = mode || voMode();
-    if (mode === "voice") { voSay(list); return; }
+    if (mode === "voice") { voVoice(list, demo); return; }
     if (mode === "bell") { voBeep(); setTimeout(voBeep, 350); setTimeout(voBeep, 700); return; }
     voFlash();   // rung / im lặng: nhấp nháy thanh đầu màn hình
     if (mode === "vibe") { try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {} }
@@ -533,7 +555,7 @@
     else if (a.bs) { VO.sn[a.bs] = Date.now() + VO_SNOOZE * 60000; voSave(); try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (x) {} voBanner(); toast("Hoãn " + VO_SNOOZE + " phút"); }
     else if (a.bo) { if (window.openMyVio) window.openMyVio("hom_nay"); }
     else if (a.bh) { voMeetToggle(); voBanner(); render(); }
-    else if (a.bv) voAlert(voDue());
+    else if (a.bv) voAlert(voDue(), null, true);
   }
   function voMeetToggle() {
     VO.meet = voMeeting() ? 0 : Date.now() + 60 * 60000; try { lsSet("mv_vo_meet", String(VO.meet)); } catch (e) {}
@@ -543,8 +565,9 @@
   function voClick(a) {
     if (a.vo != null) { VO.on = !VO.on; try { lsSet("mv_vo_on", VO.on ? "1" : "0"); } catch (e) {} if (!VO.on) try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
     else if (a.vi != null) { VO.min = VO_MINS[(VO_MINS.indexOf(VO.min) + 1) % VO_MINS.length]; try { lsSet("mv_vo_min", String(VO.min)); } catch (e) {} }
-    else if (a.vm) { VO.mode = a.vm; try { lsSet("mv_vo_mode", VO.mode); } catch (e) {} var d = voDue(); voAlert(d.length ? d : [{ tieu_de: "việc thử nhắc" }], VO.mode); toast("Thử: " + VO_MODES.filter(function (m) { return m[0] === a.vm; })[0][1]); }
+    else if (a.vm) { VO.mode = a.vm; try { lsSet("mv_vo_mode", VO.mode); } catch (e) {} var d = voDue(); voAlert(d.length ? d : [{ tieu_de: "việc thử nhắc" }], VO.mode, true); toast("Thử: " + VO_MODES.filter(function (m) { return m[0] === a.vm; })[0][1]); }
     else if (a.vh != null) voMeetToggle();
+    else if (a.vk != null) { VO.knock = !VO.knock; try { lsSet("mv_vo_knock", VO.knock ? "1" : "0"); } catch (e) {} }
     voBanner(); render();
   }
   function voTick() {

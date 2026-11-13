@@ -157,6 +157,8 @@ pre.res{white-space:pre-wrap;word-break:break-word;background:#F8FAFD;border:1px
 .fb-it .bt{display:flex;gap:8px}.fb-it .bt .btn{margin-top:10px;padding:12px;font-size:15px}
 .fb-tag{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--blue-soft);color:var(--blue);white-space:nowrap}.fb-tag.ok{background:#E3F5E9;color:#1B6B3A}.fb-tag.no{background:var(--err-bg);color:var(--err)}
 .fb-nd{white-space:pre-wrap;font-size:13px;margin-top:8px;max-height:120px;overflow:hidden;color:#334}
+.fb-img{margin-top:8px}.fb-img img{display:block;width:100%;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--blue-soft)}
+.fb-ia{display:flex;gap:8px;margin-top:6px}.fb-ib{flex:1;border:1px solid var(--line);background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 6px;font-size:14px;font-weight:700}.fb-ib.no{background:var(--err-bg);color:var(--err);border-color:transparent;flex:0 0 34%}.fb-ib.add{width:100%;border-style:dashed;padding:12px}.fb-ib:disabled{opacity:.55}
 .ht-it .b1{margin-left:auto;border:0;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
 .ht-it .b2{border:0;background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 11px;font-weight:700}
 @media (prefers-reduced-motion:reduce){.node,.hub::before,.spoke.act,.node.busy::after,.node.wait::after{animation:none}}
@@ -1307,7 +1309,7 @@ function fbRender(){
     return true; });
   if(!list.length){ box.innerHTML='<p class="sub" style="margin-top:14px">'+(FB.tab==="cho"?"Không có bài nào chờ duyệt. Bấm “AI viết bài mới” hoặc chờ 7h sáng mai.":(FB.tab==="da"?"Chưa có bài nào đã đăng.":"Chưa có bài nào."))+'</p>'; return; }
   box.innerHTML=list.map(function(x){
-    var h='<div class="fb-it"><div class="hd"><span><b>'+esc(x.sp)+'</b><br><span class="sub">'+esc(x.ngay)+(x.anh?" · có ảnh":" · chỉ chữ")+'</span></span>'+fbTag(x.tt)+'</div>';
+    var h='<div class="fb-it"><div class="hd"><span><b>'+esc(x.sp)+'</b><br><span class="sub">'+esc(x.ngay)+'<span class="fb-has">'+(x.anh?" · có ảnh":" · chỉ chữ")+'</span></span></span>'+fbTag(x.tt)+'</div>'+fbImgBlock(x);
     if(x.tt==="Chờ duyệt"||x.tt==="Lỗi"){
       h+='<textarea data-nd="'+x.row+'">'+esc(x.nd)+'</textarea>'+
         '<div class="bt"><button class="btn" data-ok="'+x.row+'">Duyệt & đăng</button><button class="btn danger" data-skip="'+x.row+'" style="flex:0 0 30%">Bỏ</button></div>';
@@ -1322,6 +1324,69 @@ function fbRender(){
     }
     return h+'</div>';
   }).join("");
+}
+/* ---------- Thêm / đổi / gỡ ảnh cho bài (13/11/2026) ----------
+   Ảnh chọn/chụp từ điện thoại hoặc máy tính → thu nhỏ (cạnh dài ≤1600px, JPEG) → backend FbAnh.gs (fb.img) lưu Drive
+   (thư mục AI_CONTROL_FB_ANH, ai có link xem được) → ghi link vào cột LinkAnh của bài → Make đăng kèm ảnh. */
+function fbEditable(x){ return x.tt==="Chờ duyệt"||x.tt==="Lỗi"; }
+function fbImgSrc(u){ var m=/\/d\/([\w-]{20,})|[?&]id=([\w-]{20,})/.exec(u||""); return m?"https://drive.google.com/thumbnail?id="+(m[1]||m[2])+"&sz=w600":u; }
+function fbImgInner(x){
+  var h="";
+  if(x.anh){
+    h+='<img loading="lazy" alt="Ảnh kèm bài" src="'+esc(fbImgSrc(x.anh))+'" onerror="this.style.display=\'none\'">';
+    if(fbEditable(x)) h+='<div class="fb-ia"><button class="fb-ib" data-imgadd="'+x.row+'">Đổi ảnh</button><button class="fb-ib no" data-imgdel="'+x.row+'">Gỡ ảnh</button></div>';
+  } else if(fbEditable(x)){
+    h+='<button class="fb-ib add" data-imgadd="'+x.row+'">📷 Thêm ảnh (chụp / chọn từ máy)</button>';
+  }
+  return h;
+}
+function fbImgBlock(x){ var h=fbImgInner(x); return h?'<div class="fb-img" data-row="'+x.row+'">'+h+'</div>':""; }
+function fbItem(row){ return FB.items.filter(function(i){ return i.row===row; })[0]; }
+/* cập nhật riêng khối ảnh của 1 bài (không vẽ lại cả danh sách để không mất chữ anh đang sửa) */
+function fbSetImg(row,url){
+  var x=fbItem(row); if(!x) return; x.anh=url;
+  var box=document.querySelector('.fb-img[data-row="'+row+'"]'); if(!box) return;
+  box.innerHTML=fbImgInner(x);
+  var it=box.closest(".fb-it"), has=it&&it.querySelector(".fb-has"); if(has) has.textContent=url?" · có ảnh":" · chỉ chữ";
+}
+function fbBusyImg(row,msg){ var box=document.querySelector('.fb-img[data-row="'+row+'"]'); if(box) box.innerHTML='<div class="sub" style="padding:10px 0">'+esc(msg)+'</div>'; }
+/* thu nhỏ ảnh trên máy trước khi gửi (ảnh điện thoại thường 3–8MB) */
+function fbResize(file){
+  return new Promise(function(ok,no){
+    var u=URL.createObjectURL(file), im=new Image();
+    im.onload=function(){
+      var M=1600, w=im.naturalWidth, h=im.naturalHeight; URL.revokeObjectURL(u);
+      if(!w||!h){ no(new Error("Không đọc được ảnh này")); return; }
+      var k=Math.min(1,M/Math.max(w,h)), c=document.createElement("canvas"); c.width=Math.round(w*k); c.height=Math.round(h*k);
+      var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(im,0,0,c.width,c.height);
+      var q=0.85, d=c.toDataURL("image/jpeg",q);
+      while(d.length>5200000 && q>0.4){ q-=0.15; d=c.toDataURL("image/jpeg",q); }   // giữ ảnh ≤ ~3.8MB
+      ok(d);
+    };
+    im.onerror=function(){ URL.revokeObjectURL(u); no(new Error("Không đọc được ảnh này (thử ảnh JPG hoặc PNG)")); };
+    im.src=u;
+  });
+}
+function fbUploadImg(row,file){
+  if(!connected()){ toast("Chưa kết nối backend"); return; }
+  var old=(fbItem(row)||{}).anh||"";
+  fbAct(function(){
+    fbBusyImg(row,"Đang xử lý và tải ảnh lên…");
+    return fbResize(file).then(function(d){ return api("fb.img",{row:row, mime:"image/jpeg", b64:d.split(",")[1]}); })
+      .then(function(r){ fbSetImg(row,r.anh); toast("Đã gắn ảnh vào bài ✓"); },
+            function(e){ fbSetImg(row,old); throw e; });
+  });
+}
+function fbPickImg(row){
+  var inp=document.createElement("input"); inp.type="file"; inp.accept="image/*"; inp.style.display="none";
+  inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(inp.parentNode) inp.parentNode.removeChild(inp); if(f) fbUploadImg(row,f); };
+  document.body.appendChild(inp); inp.click();
+}
+function fbDelImg(row){
+  if(!confirm("Gỡ ảnh khỏi bài này? Bài sẽ đăng chỉ có chữ.")) return;
+  var old=(fbItem(row)||{}).anh||"";
+  fbAct(function(){ fbBusyImg(row,"Đang gỡ ảnh…");
+    return api("fb.img",{row:row, remove:1}).then(function(){ fbSetImg(row,""); toast("Đã gỡ ảnh"); }, function(e){ fbSetImg(row,old); throw e; }); });
 }
 function fbLoad(quiet){
   if(!connected()){ var b=el("fbList"); if(b) b.innerHTML='<div class="note info">Chưa kết nối backend. Vào Cài đặt để kết nối.</div>'; return Promise.resolve(); }
@@ -1363,7 +1428,9 @@ function openAutoFB(){
     });
   };
   el("fbList").onclick=function(e){
-    var ok=e.target.closest("[data-ok]"), sk=e.target.closest("[data-skip]"), rp=e.target.closest("[data-repost]"), un=e.target.closest("[data-undo]"), sh=e.target.closest("[data-share]");
+    var ok=e.target.closest("[data-ok]"), sk=e.target.closest("[data-skip]"), rp=e.target.closest("[data-repost]"), un=e.target.closest("[data-undo]"), sh=e.target.closest("[data-share]"), ia=e.target.closest("[data-imgadd]"), idl=e.target.closest("[data-imgdel]");
+    if(ia){ fbPickImg(+ia.getAttribute("data-imgadd")); return; }
+    if(idl){ fbDelImg(+idl.getAttribute("data-imgdel")); return; }
     if(ok){
       var row=+ok.getAttribute("data-ok"), ta=document.querySelector('textarea[data-nd="'+row+'"]'), nd=ta?ta.value.trim():"";
       if(!nd){ toast("Nội dung bài đang trống"); return; }

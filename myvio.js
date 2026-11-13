@@ -106,7 +106,7 @@
   /* ---------------- dữ liệu ---------------- */
   function load(goiY) {
     if (!connected()) return Promise.resolve();
-    return api("mv.list", { goi_y: goiY !== false }).then(function (r) {
+    return mvRead("mv.list", { goi_y: goiY !== false }).then(function (r) {
       M.viec = r.viec || []; M.xong = r.xong || []; M.ghi_chu = r.ghi_chu || []; if (goiY !== false) M.goi_y = r.goi_y || []; M.loaded = true;
       saveCache(); badge(); render();
     }).catch(function (err) {
@@ -125,11 +125,39 @@
   }
   window.mvBadge = badge;
   function upsert(v) { var i = M.viec.findIndex(function (x) { return x.id === v.id; }); if (v.trang_thai !== "mo") { if (i >= 0) M.viec.splice(i, 1); } else if (i >= 0) M.viec[i] = v; else M.viec.push(v); saveCache(); badge(); }
+  /* ---- chịu lỗi mạng: "Failed to fetch" thường do Apps Script quá tải/ngắt kết nối tạm thời ---- */
+  function isNet(e) { return !!e && (e.name === "TypeError" || /failed to fetch|networkerror|load failed|network request/i.test(String(e.message || ""))); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  /* Đọc: tự thử lại tối đa 3 lần (an toàn vì không ghi dữ liệu) */
+  function mvRead(action, data, n) {
+    n = n || 0;
+    return api(action, data).catch(function (e) {
+      if (isNet(e) && n < 2) return sleep(900 * (n + 1)).then(function () { return mvRead(action, data, n + 1); });
+      throw e;
+    });
+  }
+  /* Ghi việc mới: nếu mất kết nối, KIỂM TRA server đã nhận chưa (tránh tạo trùng) rồi mới gửi lại */
+  function mvSave(v, n) {
+    n = n || 0;
+    var before = {}; M.viec.forEach(function (x) { before[x.id] = 1; });
+    return api("mv.save", { viec: v }).catch(function (e) {
+      if (!isNet(e) || n >= 2) throw e;
+      return sleep(1500 * (n + 1)).then(function () {
+        if (v.id) return mvSave(v, n + 1);
+        return mvRead("mv.list", { goi_y: false }).then(function (r) {
+          var key = String(v.tieu_de || "").trim().toLowerCase();
+          var hit = (r.viec || []).filter(function (x) { return !before[x.id] && String(x.tieu_de || "").trim().toLowerCase() === key; })[0];
+          if (hit) return { ok: true, viec: hit };      // server đã lưu rồi, chỉ mất phản hồi
+          return mvSave(v, n + 1);                       // chưa có -> gửi lại
+        }, function () { return mvSave(v, n + 1); });
+      });
+    });
+  }
   function addViec(v, quiet) {
-    return api("mv.save", { viec: v }).then(function (r) {
+    return mvSave(v).then(function (r) {
       upsert(r.viec); if (v.nguon) M.goi_y = M.goi_y.filter(function (g) { return g.key !== v.nguon; });
       if (!quiet) toast(r.viec.trang_thai === "huy" ? "Đã bỏ qua" : "Đã lưu việc"); render(); return r.viec;
-    }).catch(function (err) { toast("Lỗi: " + err.message); throw err; });
+    }).catch(function (err) { toast(isNet(err) ? "Mất kết nối máy chủ, chưa lưu. Bấm Thêm lại (nội dung còn giữ nguyên)" : "Lỗi: " + err.message); throw err; });
   }
   window.mvAdd = function (text) { var p = parse(text); return addViec(p, true).then(function (v) { return { viec: v, p: p }; }); };
   window.mvNote = function (text, khach) { return api("mv.note_save", { ghi_chu: { noi_dung: text, khach: khach || "" } }).then(function (r) { M.ghi_chu.unshift(r.ghi_chu); saveCache(); return r.ghi_chu; }); };

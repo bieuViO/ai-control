@@ -158,7 +158,7 @@ pre.res{white-space:pre-wrap;word-break:break-word;background:#F8FAFD;border:1px
 .fb-tag{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--blue-soft);color:var(--blue);white-space:nowrap}.fb-tag.ok{background:#E3F5E9;color:#1B6B3A}.fb-tag.no{background:var(--err-bg);color:var(--err)}
 .fb-nd{white-space:pre-wrap;font-size:13px;margin-top:8px;max-height:120px;overflow:hidden;color:#334}
 .fb-img{margin-top:8px}.fb-img img{display:block;width:100%;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--blue-soft)}
-.fb-ia{display:flex;gap:8px;margin-top:6px}.fb-ib{flex:1;border:1px solid var(--line);background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 6px;font-size:14px;font-weight:700}.fb-ib.no{background:var(--err-bg);color:var(--err);border-color:transparent;flex:0 0 34%}.fb-ib.add{width:100%;border-style:dashed;padding:12px}.fb-gr{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.fb-th{position:relative}.fb-th img{height:110px;max-height:none}.fb-x{position:absolute;top:6px;right:6px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:16px;line-height:30px;padding:0}.fb-gr+.fb-ib{margin-top:8px}.fb-ib:disabled{opacity:.55}
+.fb-ia{display:flex;gap:8px;margin-top:6px}.fb-ib{flex:1;border:1px solid var(--line);background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 6px;font-size:14px;font-weight:700}.fb-ib.no{background:var(--err-bg);color:var(--err);border-color:transparent;flex:0 0 34%}.fb-ib.add{width:100%;border-style:dashed;padding:12px}.fb-gr{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.fb-th{position:relative}.fb-th img{height:110px;max-height:none}.fb-x{position:absolute;top:6px;right:6px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:16px;line-height:30px;padding:0}.fb-gr+.fb-ib{margin-top:8px}.fb-ib:disabled{opacity:.55}.fb-vd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);background:var(--blue-soft);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--blue)}.fb-vd a{color:var(--blue-2)}.fb-vd .fb-ib{flex:0 0 auto;padding:6px 10px;font-size:13px;margin-left:auto}.fb-ib.vid{margin-top:8px}
 .ht-it .b1{margin-left:auto;border:0;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
 .ht-it .b2{border:0;background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:10px 11px;font-weight:700}
 @media (prefers-reduced-motion:reduce){.node,.hub::before,.spoke.act,.node.busy::after,.node.wait::after{animation:none}}
@@ -1319,7 +1319,7 @@ function fbRender(){
     return true; });
   if(!list.length){ box.innerHTML='<p class="sub" style="margin-top:14px">'+(FB.tab==="cho"?"Không có bài nào chờ duyệt. Bấm “AI viết bài mới” hoặc chờ 7h sáng mai.":(FB.tab==="da"?"Chưa có bài nào đã đăng.":"Chưa có bài nào."))+'</p>'; return; }
   box.innerHTML=list.map(function(x){
-    var h='<div class="fb-it"><div class="hd"><span><b>'+esc(x.sp)+'</b><br><span class="sub">'+esc(x.ngay)+'<span class="fb-has">'+(fbImgs(x).length?" · "+fbImgs(x).length+" ảnh":" · chỉ chữ")+'</span></span></span>'+fbTag(x.tt)+'</div>'+fbImgBlock(x);
+    var h='<div class="fb-it"><div class="hd"><span><b>'+esc(x.sp)+'</b><br><span class="sub">'+esc(x.ngay)+'<span class="fb-has">'+fbLbl(x)+'</span></span></span>'+fbTag(x.tt)+'</div>'+fbImgBlock(x);
     if(x.tt==="Chờ duyệt"||x.tt==="Lỗi"){
       h+='<textarea data-nd="'+x.row+'">'+esc(x.nd)+'</textarea>'+
         '<div class="bt"><button class="btn" data-ok="'+x.row+'">Duyệt & đăng</button><button class="btn danger" data-skip="'+x.row+'" style="flex:0 0 30%">Bỏ</button></div>';
@@ -1342,8 +1342,14 @@ function fbEditable(x){ return x.tt==="Chờ duyệt"||x.tt==="Lỗi"; }
 function fbImgSrc(u){ var m=/\/d\/([\w-]{20,})|[?&]id=([\w-]{20,})/.exec(u||""); return m?"https://drive.google.com/thumbnail?id="+(m[1]||m[2])+"&sz=w600":u; }
 var FB_MAXIMG=4;
 function fbImgs(x){ return String((x&&x.anh)||"").split("|").map(function(s){ return s.trim(); }).filter(Boolean); }
+function fbVid(x){ return String((x&&x.vid)||"").trim(); }
+function fbLbl(x){ return fbVid(x)?" · 1 video":(fbImgs(x).length?" · "+fbImgs(x).length+" ảnh":" · chỉ chữ"); }
 function fbImgInner(x){
-  var L=fbImgs(x), ed=fbEditable(x), h="";
+  var L=fbImgs(x), ed=fbEditable(x), h="", V=fbVid(x);
+  if(V){   // bài có video: chỉ đăng chữ + video, ảnh (nếu có) được giữ nhưng không đăng
+    return '<div class="fb-vd">🎬 Đã đính kèm 1 video'+(L.length?' <span class="sub" style="font-weight:400">(ảnh của bài không được đăng)</span>':'')+
+      ' <a href="'+esc(V)+'" target="_blank" rel="noopener">Xem</a>'+(ed?'<button class="fb-ib no" data-viddel="'+x.row+'">✕ Gỡ video</button>':'')+'</div>';
+  }
   if(L.length){
     h+='<div class="fb-gr" style="'+(L.length===1?'grid-template-columns:1fr':'')+'">';
     L.forEach(function(u,i){
@@ -1355,6 +1361,7 @@ function fbImgInner(x){
   if(ed){
     if(L.length<FB_MAXIMG) h+='<button class="fb-ib add" data-imgadd="'+x.row+'">'+(L.length?'＋ Thêm ảnh ('+L.length+'/'+FB_MAXIMG+')':'📷 Thêm ảnh (chụp / chọn từ máy, tối đa '+FB_MAXIMG+')')+'</button>';
     else h+='<div class="sub" style="margin-top:6px">Đã đủ '+FB_MAXIMG+' ảnh. Bấm ✕ để gỡ bớt.</div>';
+    h+='<button class="fb-ib add vid" data-vidadd="'+x.row+'">🎬 Thêm video (1–3 phút, tối đa 300MB)</button>';
   }
   return h;
 }
@@ -1365,7 +1372,7 @@ function fbSetImg(row,url){
   var x=fbItem(row); if(!x) return; x.anh=url;
   var box=document.querySelector('.fb-img[data-row="'+row+'"]'); if(!box) return;
   box.innerHTML=fbImgInner(x);
-  var it=box.closest(".fb-it"), has=it&&it.querySelector(".fb-has"); if(has) has.textContent=fbImgs(x).length?" · "+fbImgs(x).length+" ảnh":" · chỉ chữ";
+  var it=box.closest(".fb-it"), has=it&&it.querySelector(".fb-has"); if(has) has.textContent=fbLbl(x);
 }
 function fbBusyImg(row,msg){ var box=document.querySelector('.fb-img[data-row="'+row+'"]'); if(box) box.innerHTML='<div class="sub" style="padding:10px 0">'+esc(msg)+'</div>'; }
 /* thu nhỏ ảnh trên máy trước khi gửi (ảnh điện thoại thường 3–8MB) */
@@ -1417,23 +1424,74 @@ function fbDelImg(row,idx){
   fbAct(function(){ fbBusyImg(row,"Đang gỡ ảnh…");
     return api("fb.img",{row:row, remove:1, idx:idx}).then(function(r){ fbSetImg(row,r.anh||""); toast("Đã gỡ ảnh"); }, function(e){ fbSetImg(row,old); throw e; }); });
 }
+/* ---------- Thêm / gỡ video cho bài (14/11/2026) ----------
+   Video chọn/quay từ máy → cắt từng đoạn 3MB gửi backend FbVideo.gs (fb.vid_*) → Drive (AI_CONTROL_FB_ANH) → cột LinkVideo → Make B2 đăng video. */
+var FB_VCHUNK=3*1024*1024, FB_VMAX=300*1024*1024;
+function fbMerge(items){ var m=FB.vid||{}; (items||[]).forEach(function(x){ x.vid=m[String(x.row)]||""; }); return items||[]; }
+function fbReadChunk(file,off){
+  return new Promise(function(ok,no){
+    var fr=new FileReader(); fr.onload=function(){ ok(String(fr.result).split(",")[1]||""); }; fr.onerror=function(){ no(new Error("Không đọc được video từ máy")); };
+    fr.readAsDataURL(file.slice(off,Math.min(file.size,off+FB_VCHUNK)));
+  });
+}
+function fbSendChunk(row,file,off,tries){
+  return fbReadChunk(file,off).then(function(b){ return api("fb.vid_chunk",{row:row,offset:off,b64:b}); })
+    .catch(function(e){ if(tries<3) return new Promise(function(r){ setTimeout(r,1500*(tries+1)); }).then(function(){ return fbSendChunk(row,file,off,tries+1); }); throw e; });
+}
+function fbUploadVid(row,file){
+  if(!connected()){ toast("Chưa kết nối backend"); return; }
+  var x=fbItem(row); if(!x) return;
+  if(file.size>FB_VMAX){ toast("Video quá lớn ("+Math.round(file.size/1048576)+"MB). Tối đa 300MB, hãy nén hoặc cắt ngắn bớt"); return; }
+  if(fbImgs(x).length && !confirm("Bài đang có "+fbImgs(x).length+" ảnh. Bài có video chỉ đăng chữ + video, ảnh sẽ không đăng. Tiếp tục?")) return;
+  var old=x.vid||"", lock=null;
+  fbAct(function(){
+    try{ if(navigator.wakeLock) navigator.wakeLock.request("screen").then(function(l){ lock=l; },function(){}); }catch(e){}
+    var mb=Math.round(file.size/1048576)+"MB";
+    fbBusyImg(row,"Đang chuẩn bị tải video ("+mb+")… giữ màn hình sáng, đừng thoát app");
+    function go(off){
+      fbBusyImg(row,"Đang tải video "+Math.min(99,Math.round(off/file.size*100))+"% ("+mb+")… giữ màn hình sáng, đừng thoát app");
+      return fbSendChunk(row,file,off,0).then(function(r){
+        if(r.done){ x.vid=r.vid; FB.vid=FB.vid||{}; FB.vid[String(row)]=r.vid; return; }
+        if(!(r.next>off)) throw new Error("Máy chủ không nhận thêm đoạn video, thử lại");
+        return go(r.next);
+      });
+    }
+    return api("fb.vid_start",{row:row,name:file.name||"video.mp4",size:file.size,mime:file.type||"video/mp4"}).then(function(){ return go(0); })
+      .then(function(){ if(lock) try{ lock.release(); }catch(e){} fbSetImg(row,x.anh||""); toast("Đã thêm video ✓ — bấm Duyệt & đăng để lên Fanpage"); },
+        function(e){ if(lock) try{ lock.release(); }catch(er){} x.vid=old; fbSetImg(row,x.anh||""); throw e; });
+  });
+}
+function fbPickVid(row){
+  var inp=document.createElement("input"); inp.type="file"; inp.accept="video/*"; inp.style.display="none";
+  inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(inp.parentNode) inp.parentNode.removeChild(inp); if(f) fbUploadVid(row,f); };
+  document.body.appendChild(inp); inp.click();
+}
+function fbDelVid(row){
+  var x=fbItem(row); if(!x) return;
+  if(!confirm("Gỡ video khỏi bài này?")) return;
+  var old=x.vid||"";
+  fbAct(function(){ fbBusyImg(row,"Đang gỡ video…");
+    return api("fb.vid_del",{row:row}).then(function(){ x.vid=""; if(FB.vid) delete FB.vid[String(row)]; fbSetImg(row,x.anh||""); toast("Đã gỡ video"); }, function(e){ x.vid=old; fbSetImg(row,x.anh||""); throw e; }); });
+}
 function fbLoad(quiet){
   if(!connected()){ var b=el("fbList"); if(b) b.innerHTML='<div class="note info">Chưa kết nối backend. Vào Cài đặt để kết nối.</div>'; return Promise.resolve(); }
   if(!quiet){ var b2=el("fbList"); if(b2) b2.innerHTML='<p class="sub" style="margin-top:14px">Đang tải bài viết…</p>'; }
-  return api("fb.list",{limit:30}).then(function(r){ FB.items=r.items||[]; FB.url=r.url||""; fbRender(); })
+  return api("fb.list",{limit:30}).then(function(r){ FB.items=r.items||[]; FB.url=r.url||""; return fbLoadVid().then(function(){ fbMerge(FB.items); fbRender(); }); })
     .catch(function(e){ var b=el("fbList"); if(b) b.innerHTML='<div class="note err">Chưa tải được: '+esc(e.message)+'. Nếu vừa cập nhật, cần dán AutoFB.gs vào Apps Script và triển khai phiên bản mới.</div>'; });
 }
-/* sau khi duyệt: hỏi lại 15 lần × 4 giây xem Make đã đăng chưa */
+/* lấy link video của các bài (route chỉ đọc fb.vid_list); lỗi thì coi như chưa có video, không chặn danh sách */
+function fbLoadVid(){ return api("fb.vid_list",{}).then(function(r){ FB.vid=r.rows||{}; },function(){ FB.vid=FB.vid||{}; }); }
+/* sau khi duyệt: hỏi lại 15 lần × 4 giây (bài có video: 45 lần) xem Make đã đăng chưa */
 function fbWatch(row){
-  var n=0;
+  var n=0, vx=fbItem(row), lim=(vx&&vx.vid)?45:15;
   (function poll(){
     if(!el("fbList")) return;
     api("fb.list",{limit:30}).then(function(r){
-      FB.items=r.items||[]; fbRender();
+      FB.items=fbMerge(r.items||[]); fbRender();
       var x=FB.items.filter(function(i){ return i.row===row; })[0];
       if(x && x.tt==="Đã đăng"){ toast("Đã đăng lên Fanpage ✓"); FB.tab="da"; fbRender(); return; }
-      if(++n<15) setTimeout(poll,4000); else toast("Make chưa báo đăng xong, kiểm tra lại sau");
-    }).catch(function(){ if(++n<15) setTimeout(poll,4000); });
+      if(++n<lim) setTimeout(poll,4000); else toast("Make chưa báo đăng xong, kiểm tra lại sau");
+    }).catch(function(){ if(++n<lim) setTimeout(poll,4000); });
   })();
 }
 function fbAct(fn){ if(FB.busy) return; FB.busy=true; fn().then(function(){ FB.busy=false; },function(e){ FB.busy=false; toast("Lỗi: "+e.message); }); }
@@ -1457,7 +1515,9 @@ function openAutoFB(){
     });
   };
   el("fbList").onclick=function(e){
-    var ok=e.target.closest("[data-ok]"), sk=e.target.closest("[data-skip]"), rp=e.target.closest("[data-repost]"), un=e.target.closest("[data-undo]"), sh=e.target.closest("[data-share]"), ia=e.target.closest("[data-imgadd]"), idl=e.target.closest("[data-imgdel]");
+    var ok=e.target.closest("[data-ok]"), sk=e.target.closest("[data-skip]"), rp=e.target.closest("[data-repost]"), un=e.target.closest("[data-undo]"), sh=e.target.closest("[data-share]"), ia=e.target.closest("[data-imgadd]"), idl=e.target.closest("[data-imgdel]"), va=e.target.closest("[data-vidadd]"), vd=e.target.closest("[data-viddel]");
+    if(va){ fbPickVid(+va.getAttribute("data-vidadd")); return; }
+    if(vd){ fbDelVid(+vd.getAttribute("data-viddel")); return; }
     if(ia){ fbPickImg(+ia.getAttribute("data-imgadd")); return; }
     if(idl){ fbDelImg(+idl.getAttribute("data-imgdel"),+idl.getAttribute("data-idx")||0); return; }
     if(ok){

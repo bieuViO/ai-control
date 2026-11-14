@@ -347,7 +347,7 @@ var TOOLS = [
    desc:"Làm trọn quy trình trong D:\\1 KHÁCH HÀNG\\1. Hợp Đồng Claude. Bước 1: máy mở hopdong.vnpt.vn, anh bấm tải PDF bằng extension (hợp đồng doanh nghiệp, hai bên đã ký) vào Chưa Đóng dấu\\T.. rồi xác nhận. Bước 2: đóng dấu (chữ ký + mộc), chuyển bản _da ky sang Đã đóng dấu\\T... Bước 3: copy vào folder từng khách. Mỗi bước chạy thử trước, anh xác nhận mới làm thật. Khách chưa có trong danh sách thì dừng, không tự tạo folder.",
    fields:[
      {k:"thang", label:"Tháng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"T"+m];})},
-     {k:"chuc_nang", label:"Làm bước nào", type:"select", req:true, opts:[["1,2,3","Cả 3 bước: tải PDF → đóng dấu → sắp xếp"],["1","Bước 1: tải PDF từ hopdong.vnpt.vn"],["2,3","Bước 2 + 3: đóng dấu rồi sắp xếp"],["2","Bước 2: chỉ đóng dấu"],["3","Bước 3: chỉ sắp xếp vào folder khách"]]}
+     {k:"chuc_nang", label:"Làm bước nào", type:"select", req:true, opts:[["1","Bước 1: tải PDF từ hopdong.vnpt.vn"],["2","Bước 2: đóng dấu (chữ ký + mộc)"],["3","Bước 3: sắp xếp vào folder khách"],["2,3","Bước 2 + 3: đóng dấu rồi sắp xếp"],["1,2,3","Cả 3 bước: tải PDF → đóng dấu → sắp xếp"]]}
    ]},
   /* Auto FB (thay HĐ Word 30/10/2026): duyệt + đăng bài Fanpage VNPT CHƠN THÀNH. Backend: AutoFB.gs (fb.list / fb.set / fb.post / fb.new) + Make B2 đăng bài. */
   {id:"auto_fb", autofb:true, short:"Auto FB", name:"Auto FB – Fanpage VNPT", sub:"Duyệt, đăng bài Fanpage VNPT CHƠN THÀNH", icon:"share", ready:true, risk:"R1"},

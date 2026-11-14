@@ -343,11 +343,11 @@ var TOOLS = [
   {id:"chung_thuc", parent:"my_tool", short:"Hồ sơ chứng thực", name:"Tạo hồ sơ chứng thực", sub:"Ghép CCCD + giấy tờ, đóng dấu Đã đối chiếu bản chính", icon:"file", ready:true, risk:"R1",
    desc:"Máy tính ghép ảnh CCCD (trước) + PDF giấy tờ (sau) trong thư mục khách, đóng dấu trang 1, lưu hoso_chungthuc_<tên>.pdf vào đúng thư mục đó và gửi file về điện thoại. Anh nhớ đối chiếu tên, ngày sinh, số CCCD.",
    fields:[ {k:"thu_muc", label:"Thư mục khách hàng", type:"text", req:true, sub:"Tên thư mục trong D:\\1 KHÁCH HÀNG (gõ không dấu được, vd: gau dau) hoặc dán đường dẫn đầy đủ"} ]},
-  {id:"hop_dong_thang", parent:"my_tool", short:"HĐ hàng tháng", name:"Hợp đồng hàng tháng", sub:"Đóng dấu → chuyển Đã đóng dấu → sắp xếp vào folder khách", icon:"contract", ready:true, risk:"R2",
-   desc:"Làm trọn quy trình trong D:\\1 KHÁCH HÀNG\\1. Hợp Đồng Claude: lấy PDF ở Chưa Đóng dấu\\T.., đóng dấu (chữ ký + mộc), chuyển bản _da ky sang Đã đóng dấu\\T.., rồi copy vào folder từng khách. Mỗi bước chạy thử trước, anh xác nhận mới làm thật. Khách chưa có trong danh sách thì dừng, không tự tạo folder. Bước tải PDF từ hopdong.vnpt.vn anh tải tay trước.",
+  {id:"hop_dong_thang", parent:"my_tool", short:"HĐ hàng tháng", name:"Hợp đồng hàng tháng", sub:"Tải PDF → đóng dấu → sắp xếp vào folder khách", icon:"contract", ready:true, risk:"R2",
+   desc:"Làm trọn quy trình trong D:\\1 KHÁCH HÀNG\\1. Hợp Đồng Claude. Bước 1: máy mở hopdong.vnpt.vn, anh bấm tải PDF bằng extension (hợp đồng doanh nghiệp, hai bên đã ký) vào Chưa Đóng dấu\\T.. rồi xác nhận. Bước 2: đóng dấu (chữ ký + mộc), chuyển bản _da ky sang Đã đóng dấu\\T... Bước 3: copy vào folder từng khách. Mỗi bước chạy thử trước, anh xác nhận mới làm thật. Khách chưa có trong danh sách thì dừng, không tự tạo folder.",
    fields:[
      {k:"thang", label:"Tháng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"T"+m];})},
-     {k:"chuc_nang", label:"Làm bước nào", type:"select", req:true, opts:[["2,3","Đóng dấu rồi sắp xếp (bước 2 + 3)"],["2","Chỉ đóng dấu (bước 2)"],["3","Chỉ sắp xếp vào folder khách (bước 3)"]]}
+     {k:"chuc_nang", label:"Làm bước nào", type:"select", req:true, opts:[["1,2,3","Cả 3 bước: tải PDF → đóng dấu → sắp xếp"],["1","Bước 1: tải PDF từ hopdong.vnpt.vn"],["2,3","Bước 2 + 3: đóng dấu rồi sắp xếp"],["2","Bước 2: chỉ đóng dấu"],["3","Bước 3: chỉ sắp xếp vào folder khách"]]}
    ]},
   /* Auto FB (thay HĐ Word 30/10/2026): duyệt + đăng bài Fanpage VNPT CHƠN THÀNH. Backend: AutoFB.gs (fb.list / fb.set / fb.post / fb.new) + Make B2 đăng bài. */
   {id:"auto_fb", autofb:true, short:"Auto FB", name:"Auto FB – Fanpage VNPT", sub:"Duyệt, đăng bài Fanpage VNPT CHƠN THÀNH", icon:"share", ready:true, risk:"R1"},

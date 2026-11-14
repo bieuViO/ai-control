@@ -851,6 +851,12 @@ function renderJobSheet(first){
   if(!first && j.tool==="vnedu_serial" && j.trang_thai==="await_confirm" && VN_REND===j.id+"|"+String(j.ket_qua||"").length && el("vnQ")) return;
   // Nhắc nợ đang hiện bảng tick khách và dữ liệu không đổi → KHÔNG vẽ lại (vẽ lại 4 giây/lần làm mất ô tìm kiếm, ô email và bàn phím)
   if(!first && j.tool==="nhac_no" && j.trang_thai==="await_confirm" && NN_REND===j.id+"|"+String(j.ket_qua||"").length && el("nnQ")) return;
+  // (14/11/2026) Kết quả không đổi → KHÔNG vẽ lại, giữ nguyên vị trí cuộn khi anh đang kéo xem danh sách dài
+  var jkey=j.id+"|"+j.trang_thai+"|"+String(j.ket_qua||"").length+"|"+String(j.ket_qua||"").slice(-80);
+  if(!first && window.JOB_REND===jkey && document.querySelector("pre.res")) return;
+  window.JOB_REND=jkey;
+  var _pre=document.querySelector("pre.res"), _keepTop=(!first&&_pre)?_pre.scrollTop:0;
+  setTimeout(function(){ var p2=document.querySelector("pre.res"); if(p2&&_keepTop) p2.scrollTop=_keepTop; },0);
   var t=toolById(j.tool)||{name:j.tool,icon:"chip"};
   var st=j.trang_thai, idx=st==="confirmed"?2:FLOW.indexOf(st);
   var bar='<div class="steps">'+FLOW.map(function(s,i){

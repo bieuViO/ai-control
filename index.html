@@ -349,12 +349,6 @@ var TOOLS = [
      {k:"thang", label:"Tháng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"T"+m];})},
      {k:"chuc_nang", label:"Làm bước nào", type:"select", req:true, opts:[["2,3","Đóng dấu rồi sắp xếp (bước 2 + 3)"],["2","Chỉ đóng dấu (bước 2)"],["3","Chỉ sắp xếp vào folder khách (bước 3)"]]}
    ]},
-  {id:"dong_dau", parent:"my_tool", short:"Đóng dấu HĐ", name:"Đóng dấu hợp đồng VNPT", sub:"Chữ ký + mộc Bên B, Ký bởi Bên A, giữ nguyên chữ ký số", icon:"contract", ready:true, risk:"R2",
-   desc:"Chạy thử trước để xem file nào sẽ được đóng dấu (file đã có bản _da ky thì bỏ qua). Anh xác nhận rồi máy mới đóng dấu thật, lưu vào 01_DA_KY, file gốc giữ nguyên.",
-   fields:[
-     {k:"thang", label:"Thư mục hợp đồng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"T"+m+" (02_CHUA_KY)"];})},
-     {k:"duong_dan", label:"Hoặc đường dẫn khác", type:"text", sub:"Để trống nếu dùng thư mục tháng ở trên"}
-   ]},
   /* Auto FB (thay HĐ Word 30/10/2026): duyệt + đăng bài Fanpage VNPT CHƠN THÀNH. Backend: AutoFB.gs (fb.list / fb.set / fb.post / fb.new) + Make B2 đăng bài. */
   {id:"auto_fb", autofb:true, short:"Auto FB", name:"Auto FB – Fanpage VNPT", sub:"Duyệt, đăng bài Fanpage VNPT CHƠN THÀNH", icon:"share", ready:true, risk:"R1"},
   /* AI Bán Hàng (sales.js): đọc/ghi Sheet "AI Bán Hàng – VNPT Chơn Thành" qua backend (action sheet.*). */
@@ -363,7 +357,7 @@ var TOOLS = [
   {id:"hd_word", parent:"hop_dong_web", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false},
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
   /* My Tool: sẽ liên kết sau (đổi ready:true khi nối). Vòng ngoài hiện 9 nút, không vẽ đường nối, chấm xanh = đã kết nối. */
-  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Hồ sơ chứng thực, Đóng dấu HĐ, HĐ hàng tháng, PDF hóa đơn, CA Plugin", icon:"chip", ready:true},
+  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Hồ sơ chứng thực, HĐ hàng tháng, PDF hóa đơn, CA Plugin", icon:"chip", ready:true},
   {id:"my_google", short:"My Google", name:"My Google", sub:"Mở nhanh Drive, Gmail, Lịch, Sheet, Docs, Meet", icon:"globe", ready:true, ring:"out", risk:"R0",
    links:[
     {t:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app", icon:"users", act:"khach"},   /* mở sheets.js, không rời app */

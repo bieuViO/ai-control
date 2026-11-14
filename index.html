@@ -288,10 +288,6 @@ var TOOLS = [
    ],
    price:function(v){ return contractPrice(v); },
    build:function(p){ if(p.nhom_dv==="BHXH VAN"){ p.dich_vu="BHXH VAN "+p.van_goi+" - "+p.van_thang+" tháng"; } else { p.dich_vu=p.nhom_dv; } delete p.nhom_dv; delete p.van_goi; delete p.van_thang; return p; }},
-  {id:"phan_loai", parent:"hop_dong_web", short:"Phân loại HĐ", name:"Phân loại hợp đồng", sub:"Copy PDF đã ký vào folder khách hàng", icon:"folder", ready:true, risk:"R1",
-   desc:"Chạy thử trước để xem sẽ copy gì và khách nào chưa có trong bảng alias. Anh xác nhận rồi mới copy thật.",
-   fields:[ {k:"thang", label:"Tháng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"Tháng "+m];})} ]},
-  /* Tool dạng liên kết: bấm là mở app có sẵn (không đi qua hàng đợi). Đổi link ở đây nếu app đổi địa chỉ. */
   {id:"cong_no", short:"My Data", name:"My Data", sub:"Mở app theo dõi công nợ", icon:"wallet", ready:true, risk:"R0",
    link:"https://claude.ai/artifact/JXWt6JKKdSF9NmBWHEdgJg"},
   /* Tool Hỗ trợ khách: không qua hàng đợi, mở màn riêng (gửi tool + kết nối RustDesk) */
@@ -343,7 +339,7 @@ var TOOLS = [
   {id:"chung_thuc", parent:"my_tool", short:"Hồ sơ chứng thực", name:"Tạo hồ sơ chứng thực", sub:"Ghép CCCD + giấy tờ, đóng dấu Đã đối chiếu bản chính", icon:"file", ready:true, risk:"R1",
    desc:"Máy tính ghép ảnh CCCD (trước) + PDF giấy tờ (sau) trong thư mục khách, đóng dấu trang 1, lưu hoso_chungthuc_<tên>.pdf vào đúng thư mục đó và gửi file về điện thoại. Anh nhớ đối chiếu tên, ngày sinh, số CCCD.",
    fields:[ {k:"thu_muc", label:"Thư mục khách hàng", type:"text", req:true, sub:"Tên thư mục trong D:\\1 KHÁCH HÀNG (gõ không dấu được, vd: gau dau) hoặc dán đường dẫn đầy đủ"} ]},
-  {id:"hop_dong_thang", parent:"my_tool", short:"HĐ hàng tháng", name:"Hợp đồng hàng tháng", sub:"Tải PDF → đóng dấu → sắp xếp vào folder khách", icon:"contract", ready:true, risk:"R2",
+  {id:"hop_dong_thang", parent:"hop_dong_web", short:"HĐ hàng tháng", name:"Hợp đồng hàng tháng", sub:"Tải PDF → đóng dấu → sắp xếp vào folder khách", icon:"contract", ready:true, risk:"R2",
    desc:"Làm trọn quy trình trong D:\\1 KHÁCH HÀNG\\1. Hợp Đồng Claude. Bước 1: máy mở hopdong.vnpt.vn, anh bấm tải PDF bằng extension (hợp đồng doanh nghiệp, hai bên đã ký) vào Chưa Đóng dấu\\T.. rồi xác nhận. Bước 2: đóng dấu (chữ ký + mộc), chuyển bản _da ky sang Đã đóng dấu\\T... Bước 3: copy vào folder từng khách. Mỗi bước chạy thử trước, anh xác nhận mới làm thật. Khách chưa có trong danh sách thì dừng, không tự tạo folder.",
    fields:[
      {k:"thang", label:"Tháng", type:"select", req:true, opts:[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return ["T"+m,"T"+m];})},
@@ -357,7 +353,7 @@ var TOOLS = [
   {id:"hd_word", parent:"hop_dong_web", short:"HĐ Word", name:"Hợp đồng Word thủ công", sub:"MetroNet, HBS, vnEdu, Pharmacy", icon:"word", ready:false},
   /* My Google: lối tắt mở nhanh các dịch vụ Google. ring:"out" = nằm vòng ngoài cùng; ready:true = có đường nối vào tâm AI Control. Thêm lối tắt mới ở mảng links. */
   /* My Tool: sẽ liên kết sau (đổi ready:true khi nối). Vòng ngoài hiện 9 nút, không vẽ đường nối, chấm xanh = đã kết nối. */
-  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Hồ sơ chứng thực, HĐ hàng tháng, PDF hóa đơn, CA Plugin", icon:"chip", ready:true},
+  {id:"my_tool", group:true, short:"My Tool", name:"My Tool", sub:"Hồ sơ chứng thực, PDF hóa đơn, CA Plugin", icon:"chip", ready:true},
   {id:"my_google", short:"My Google", name:"My Google", sub:"Mở nhanh Drive, Gmail, Lịch, Sheet, Docs, Meet", icon:"globe", ready:true, ring:"out", risk:"R0",
    links:[
     {t:"Bảng khách hàng", sub:"Xem, thêm, sửa Sheet KHÁCH HÀNG 2026, 2025 ngay trong app", icon:"users", act:"khach"},   /* mở sheets.js, không rời app */

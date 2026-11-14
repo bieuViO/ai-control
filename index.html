@@ -614,7 +614,7 @@ function openSheet(html){
     var keep=[].filter.call(s.childNodes,function(n){ return !(n.classList&&(n.classList.contains("grab")||n.classList.contains("navb"))); });
     var hd=s.querySelector(".sh-h"), key=hd?hd.textContent:"";
     var d=document.createElement("div"); d.innerHTML=html; var nh=d.querySelector(".sh-h"), nkey=nh?nh.textContent:"";
-    if(keep.length && !s.querySelector('[id$="Prog"]') && key!==nkey) NAV.push(keep);
+    if(keep.length && !s.querySelector('[id$="Prog"]') && (key!==nkey || s.querySelector('.gm'))) NAV.push(keep);   // menu nhóm (vd Hợp đồng → Tạo hợp đồng) luôn có nút ← dù trùng tiêu đề
   } else NAV=[];
   s.innerHTML='<div class="grab"></div>'+navBar()+html; shWire();
   el("back").style.display="block"; setTimeout(function(){s.classList.add("open");},10);

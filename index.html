@@ -331,7 +331,9 @@ var TOOLS = [
   {id:"bc_doanh_thu", parent:"invoice_kh", doanhthu:true, short:"Doanh thu", name:"Doanh thu", sub:"Doanh thu từng khách hàng, theo tháng", icon:"chart", ready:true, risk:"R0"},
   {id:"bc_diem_danh", parent:"invoice_kh", diemdanh:true, short:"Điểm danh", name:"Điểm danh", sub:"Tỷ lệ từng lớp, học sinh chưa điểm danh liên tiếp", icon:"users", ready:true, risk:"R0"},
   {id:"bc_cong_no", parent:"invoice_kh", congno:true, short:"Công nợ theo tháng", name:"Công nợ theo tháng", sub:"Tổng nợ còn lại theo từng tháng", icon:"chart", ready:true, risk:"R0"},
-  {id:"trinh_ky", parent:"hop_dong_web", short:"Trình ký", name:"Chuyển trình hàng loạt", sub:"Chuyển trình và tải PDF hợp đồng", icon:"send", ready:false},
+  {id:"trinh_ky", parent:"hop_dong_web", short:"Trình ký", name:"Chuyển trình hàng loạt", sub:"Chuyển trình lãnh đạo các HĐ khách đã ký", icon:"send", ready:true, risk:"R2",
+   desc:"Máy mở trang Quản lý hợp đồng trên Chrome, extension tự quét các hồ sơ \"Khách hàng đã ký\" (Chuyển trình lãnh đạo → Nguyễn Minh Tiến) ở chế độ chạy thử. Anh xem danh sách, bỏ tick \"Chạy thử\" rồi tự bấm \"2. Chuyển trình\" trên máy tính.",
+   fields:[]},
   /* My ViO (aic-v68, 12/11/2026): trợ lý cá nhân – việc cần làm, nhắc việc, theo dõi, ghi chú (myvio.js, backend MyVio.gs). Thay chỗ CA Plugin trên vòng ngoài. */
   {id:"my_vio", myvio:true, short:"My ViO", name:"My ViO – Trợ lý cá nhân", sub:"Việc cần làm, nhắc việc, theo dõi, ghi chú", icon:"vio", ready:true, risk:"R0"},
   {id:"ca_plugin", parent:"my_tool", short:"CA Plugin", name:"Sửa lỗi VNPT-CA Plugin", sub:"Gỡ và cài lại plugin", icon:"wrench", ready:false},

@@ -131,7 +131,7 @@ function ttSum(){
 /* Số em ĐĂNG KÝ thực sự làm được: chỉ khối có gói đúng cấp */
 function ttGoiOK(k){ var g=TT.plan.goi[k]; return !!(g&&g[2]); }
 function ttItems(mode){
-  return TT.plan.lops.filter(function(l){ return (ttGoiOK(l[2])?l[5]:0)+(mode==="reg"?0:l[6])>0; })
+  return TT.plan.lops.filter(function(l){ return (mode==="can"?0:(ttGoiOK(l[2])?l[5]:0))+(mode==="reg"?0:l[6])>0; })
     .map(function(l){ var g=TT.plan.goi[l[2]]; return [l[0],(g&&g[2])?g[0]:"",l[1]]; });
 }
 
@@ -148,22 +148,22 @@ function ttShow(){
   if(gk.length) h+='<div class="note err">* Khối '+gk.join(", ")+': không xác định được gói đúng cấp (khối 1-5 cần gói 50, khối 6-12 cần gói 70) nên sẽ KHÔNG đăng ký cho các khối này.</div>';
   if(big) h+='<div class="note err"><b>Cảnh báo:</b> sẽ hủy '+tNum(T.can)+' / '+tNum(T.dk)+' em đang đăng ký ('+pct+'%). Phụ huynh những em này sẽ ngừng nhận SLL. Chỉ nên bấm khi đã qua hạn đóng tiền.</div>';
   h+='<button class="btn" id="ttReg" style="margin-top:12px">Chỉ ĐĂNG KÝ người đã đóng ('+tNum(ttGoiOKReg())+' em)</button>'+
-     '<button class="btn danger" id="ttAll" style="margin-top:8px">Đăng ký + HỦY người chưa đóng ('+tNum(ttGoiOKReg()+T.can)+' em)</button>'+
+     '<button class="btn danger" id="ttAll" style="margin-top:8px">HỦY người chưa đóng ('+tNum(T.can)+' em)</button>'+
      '<div id="ttOut"></div><button class="btn sec" id="ttRe">Đối chiếu lại</button><button class="btn sec" id="ttBack">Đổi trường</button><button class="btn sec" id="ttX">Đóng</button>';
   openSheet(h);
   el("ttX").onclick=function(){ TT.run++; closeSheet(); };
   el("ttBack").onclick=function(){ TT.run++; openTt(); };
   el("ttRe").onclick=function(){ ttPlan({tk:TT.tk,truong:TT.truong}); };
   el("ttReg").onclick=function(){ ttApply("reg"); };
-  el("ttAll").onclick=function(){ ttApply("all"); };
+  el("ttAll").onclick=function(){ ttApply("can"); };   // chỉ hủy em chưa đóng, không đăng ký
 }
 function ttGoiOKReg(){ var n=0; TT.plan.lops.forEach(function(l){ if(ttGoiOK(l[2])) n+=l[5]; }); return n; }
 
 /* ---------- Bước 3: áp dụng (GHI lên vnEdu) — chỉ sau khi anh xác nhận ---------- */
 function ttApply(mode){
-  var items=ttItems(mode), S=ttSum(), reg=ttGoiOKReg(), can=mode==="reg"?0:S.T.can;
+  var items=ttItems(mode), S=ttSum(), reg=mode==="can"?0:ttGoiOKReg(), can=mode==="reg"?0:S.T.can;
   if(!items.length||(reg+can)===0){ toast("Không có em nào cần đổi"); return; }
-  var msg="Áp dụng cho "+items.length+" lớp của "+TT.truong+":\n• ĐĂNG KÝ gói: "+reg+" em đã đóng"+(can?"\n• HỦY gói: "+can+" em chưa đóng":"")+"\n\nGhi thẳng lên vnEdu, không hoàn tác tự động. Tiếp tục?";
+  var msg="Áp dụng cho "+items.length+" lớp của "+TT.truong+":"+(reg?"\n• ĐĂNG KÝ gói: "+reg+" em đã đóng":"")+(can?"\n• HỦY gói: "+can+" em chưa đóng":"")+"\n\nGhi thẳng lên vnEdu, không hoàn tác tự động. Tiếp tục?";
   if(!confirm(msg)) return;
   if(can&&S.T.dk&&can*100/S.T.dk>=30&&!confirm("XÁC NHẬN LẦN CUỐI: sẽ HỦY "+can+" em ("+Math.round(can*100/S.T.dk)+"% số đang đăng ký). Đã qua hạn đóng tiền chưa?")) return;
   if(!connected()){ toast("Chưa kết nối máy tính"); return; }

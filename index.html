@@ -114,6 +114,7 @@ h3.sec{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--m
 .sh-h b{font-size:18px;color:var(--blue)}.sh-d{color:var(--mute);font-size:13px;margin:2px 0 8px}
 label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
 label i{color:var(--err);font-style:normal}
+.sheet textarea{width:100%;box-sizing:border-box;min-height:96px;border:1px solid #D0D5DD;border-radius:12px;padding:11px 12px;font:15px/1.45 inherit;background:#fff;color:var(--text);outline:none;resize:vertical}
 .sheet input,.sheet select{width:100%;border:1px solid #D0D5DD;border-radius:12px;padding:13px 12px;font-size:16px;background:#fff;color:var(--text);outline:none}
 .sheet input:focus,.sheet select:focus{border-color:var(--blue-2);box-shadow:0 0 0 3px rgba(27,95,209,.14)}
 .sub{font-size:12px;color:var(--mute);margin-top:4px}
@@ -262,7 +263,7 @@ function contractPrice(v){
 function fmtMoney(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
 var DV_VAN = [["VAN10","VNPT-VAN 10"],["VAN100","VNPT-VAN 100"],["VAN1000","VNPT-VAN 1000"],["VANMax","VNPT-VAN Max"]];
 var TOOLS = [
-  {id:"bao_gia", short:"Báo giá", name:"Báo giá", sub:"Tạo báo giá PDF/Word có mộc", icon:"quote", ready:true, risk:"R1",
+  {id:"bao_gia", groupTitle:"Tạo báo giá", short:"Báo giá", name:"Báo giá", sub:"Tạo báo giá PDF/Word có mộc", icon:"quote", ready:true, risk:"R1",
    desc:"Máy tính của anh dựng báo giá bằng tool có sẵn, kết quả gửi về điện thoại dạng file PDF.",
    fields:[
      {k:"mst", label:"Mã số thuế", type:"text", mode:"numeric", req:true, lookup:true},
@@ -275,6 +276,24 @@ var TOOLS = [
      {k:"dinh_dang", label:"Định dạng file", type:"select", opts:[["pdf","PDF"],["word","Word"],["pdf,word","PDF + Word"]]},
      {k:"moc", label:"Treo mộc VNPT Chơn Thành", type:"select", opts:[["yes","Có"],["no","Không"]]}
    ]},
+  /* (17/11/2026) Biên bản thay thế / điều chỉnh hóa đơn — nằm trong nút Báo giá, chạy trên cloud (BienBanHD.gs), xuất Word gửi Zalo */
+  {id:"bien_ban_hd", parent:"bao_gia", jobTool:"bao_gia", short:"BB hóa đơn", name:"Biên bản hóa đơn", sub:"Thay thế / điều chỉnh HĐ sai, xuất Word gửi khách ký", icon:"word", ready:true, risk:"R1",
+   desc:"Điền theo mẫu BB đã duyệt, xuất file Word. Mỗi dòng hóa đơn: SỐ_HĐ NGÀY (vd 571149 03/09/2026). Nội dung trước/sau: mỗi dòng “Nhãn : giá trị”.",
+   fields:[
+     {k:"loai", label:"Loại biên bản", type:"select", req:true, opts:[["thay_the","Thay thế hóa đơn"],["dieu_chinh","Điều chỉnh hóa đơn"]]},
+     {k:"mst", label:"MST Bên A (khách hàng)", type:"text", mode:"numeric", req:true, lookup:true},
+     {k:"ten", label:"Tên Bên A (đúng)", type:"text", req:true},
+     {k:"dia_chi", label:"Địa chỉ Bên A (đúng)", type:"text", req:true},
+     {k:"dai_dien", label:"Người đại diện", type:"text", req:true, sub:"Ghi cả Ông/Bà, vd: Bà Lê Thị Thảo Chi"},
+     {k:"chuc_vu", label:"Chức vụ", type:"text", req:true},
+     {k:"ds_hd", label:"Hóa đơn bị sai (mỗi dòng 1 HĐ)", type:"textarea", req:true, ph:"571149 03/09/2026\n646492 02/10/2026", sub:"Mẫu số 1/23, ký hiệu 1K26THC tự điền"},
+     {k:"ly_do", label:"Lý do", type:"select", req:true, opts:[["Sai tên, địa chỉ và mã số thuế người mua","Sai tên, địa chỉ, MST người mua"],["Sai tên người mua","Sai tên người mua"],["Sai địa chỉ người mua","Sai địa chỉ người mua"],["Sai mã số thuế người mua","Sai MST người mua"],["Sai tên và địa chỉ người mua","Sai tên + địa chỉ người mua"],["Sai thuế suất","Sai thuế suất"],["Sai số lượng, đơn giá","Sai số lượng, đơn giá"],["Sai tên hàng hóa, dịch vụ","Sai tên hàng hóa, dịch vụ"],["Sai số tiền","Sai số tiền"],["khac","Khác (nhập tay)"]]},
+     {k:"ly_do_khac", label:"Lý do (nhập tay)", type:"text", req:true, when:["ly_do","khac"]},
+     {k:"truoc", label:"Nội dung TRƯỚC (thông tin sai)", type:"textarea", req:true, sub:"Tự gợi ý dòng theo lý do, anh điền giá trị sau dấu :"},
+     {k:"sau", label:"Nội dung SAU (thông tin đúng)", type:"textarea", sub:"Lỗi người mua: tự lấy từ Bên A. Lỗi khác: anh điền"},
+     {k:"ngay", label:"Ngày lập biên bản", type:"text", sub:"Bỏ trống = hôm nay. Dạng 17/11/2026"}
+   ],
+   build:function(p){ p.dich_vu="bien_ban_hd"; p.dinh_dang="word"; if(p.ly_do!=="khac") delete p.ly_do_khac; return p; }},
   {id:"hop_dong_web", short:"Hợp đồng", name:"Hợp đồng", sub:"hopdong.vnpt.vn, điền sẵn tới trước nút Lưu", icon:"contract", ready:true, risk:"R2",
    desc:"Chrome trên máy tính tự điền hợp đồng. Dừng trước nút Lưu để anh xác nhận và tự bấm Lưu.",
    fields:[
@@ -414,10 +433,10 @@ function saveLocalJobs(a){ lsSet("aic_jobs", JSON.stringify(a.slice(0,20))); }
 
 function submitJob(tool, params){
   if(!connected()){                       // Demo: chỉ mô phỏng, không chạy tool thật
-    var j={id:"D"+Date.now(), thoi_gian:new Date().toISOString(), tool:tool.id, params:params, trang_thai:"done", ket_qua:"Chế độ Demo: chưa kết nối backend nên chưa chạy tool thật. Vào Cài đặt để kết nối."};
+    var j={id:"D"+Date.now(), thoi_gian:new Date().toISOString(), tool:tool.jobTool||tool.id, params:params, trang_thai:"done", ket_qua:"Chế độ Demo: chưa kết nối backend nên chưa chạy tool thật. Vào Cài đặt để kết nối."};
     var a=loadLocalJobs(); a.unshift(j); saveLocalJobs(a); JOBS=a; renderJobs(); return Promise.resolve(j);
   }
-  return api("job.enqueue",{tool:tool.id, params:params}).then(function(r){ refreshJobs(); return r; });
+  return api("job.enqueue",{tool:tool.jobTool||tool.id, params:params}).then(function(r){ refreshJobs(); return r; });
 }
 function refreshJobs(){
   if(!connected()){ JOBS=loadLocalJobs(); renderJobs(); return Promise.resolve(); }
@@ -647,7 +666,7 @@ function openSoon(t){
 /* Menu chức năng con (vd. Hợp đồng gồm: Tạo hợp đồng, Phân loại HĐ, Trình ký) */
 function openGroup(t){
   var kids=TOOLS.filter(function(c){return c.parent===t.id;});
-  var items=(t.group?[{t:t,title:"",sub:""}]:[{t:t,title:"Tạo hợp đồng",sub:t.sub}]).concat(kids.map(function(c){ return {t:c,title:c.name,sub:c.ready?c.sub:"Đang nâng cấp"}; }));
+  var items=(t.group?[{t:t,title:"",sub:""}]:[{t:t,title:t.groupTitle||"Tạo hợp đồng",sub:t.sub}]).concat(kids.map(function(c){ return {t:c,title:c.name,sub:c.ready?c.sub:"Đang nâng cấp"}; }));
   var h='<div class="sh-h"><span class="ic">'+svg(t.icon)+'</span><div><b>'+esc(t.name)+'</b></div></div><p class="sh-d">Chọn việc cần làm</p>'+
     items.map(function(it,i){ if(t.group && i===0) return ""; return '<button class="gm" data-g="'+i+'"><span class="ic">'+svg(it.t.icon)+'</span><span><b>'+esc(it.title)+'</b><small>'+esc(it.sub)+'</small></span><i>›</i></button>'; }).join("")+
     '<button class="btn sec" id="btnCloseG">Đóng</button>';
@@ -716,6 +735,29 @@ function openVnedu(t){
   };
   el("vnClose").onclick=closeSheet;
 }
+/* (17/11/2026) Biên bản hóa đơn: gợi ý các dòng "Nhãn : giá trị" theo lý do; lỗi người mua → nội dung SAU lấy từ Bên A */
+function bbHdLabels(ld){
+  ld=String(ld||"").toLowerCase(); var L=[];
+  if(/người mua/.test(ld)){ if(/tên/.test(ld)) L.push("Tên người mua"); if(/địa chỉ/.test(ld)) L.push("Địa chỉ"); if(/mã số thuế/.test(ld)) L.push("MST người mua"); }
+  else if(/thuế suất/.test(ld)) L=["Tên hàng hóa, dịch vụ","Thuế suất","Tiền thuế","Tổng tiền thanh toán"];
+  else if(/số lượng|đơn giá/.test(ld)) L=["Tên hàng hóa, dịch vụ","Số lượng","Đơn giá","Thành tiền","Tiền thuế","Tổng tiền thanh toán"];
+  else if(/hàng hóa/.test(ld)) L=["Tên hàng hóa, dịch vụ"];
+  else if(/số tiền/.test(ld)) L=["Thành tiền","Tiền thuế","Tổng tiền thanh toán"];
+  return L;
+}
+function bbHdAuto(form){
+  var E=form.elements, autoT="", autoS="";
+  function val(k){ return E[k]?String(E[k].value).trim():""; }
+  function sauNguoiMua(L){ var m={"Tên người mua":val("ten"),"Địa chỉ":val("dia_chi"),"MST người mua":val("mst").replace(/[\s.]/g,"")}; return L.map(function(x){ return x+" : "+(m[x]||""); }).join("\n"); }
+  function run(){
+    var ld=val("ly_do")==="khac"?val("ly_do_khac"):val("ly_do"), L=bbHdLabels(ld), nm=/người mua/i.test(ld);
+    if(!L.length) return;
+    if(!E.truoc.value.trim() || E.truoc.value===autoT){ autoT=L.map(function(x){return x+" : ";}).join("\n"); E.truoc.value=autoT; }
+    if(!E.sau.value.trim() || E.sau.value===autoS){ autoS=nm?sauNguoiMua(L):L.map(function(x){return x+" : ";}).join("\n"); E.sau.value=autoS; }
+  }
+  ["ly_do","ly_do_khac","ten","dia_chi","mst"].forEach(function(k){ if(E[k]){ E[k].addEventListener("change",run); E[k].addEventListener("input",function(){ if(k!=="ly_do_khac") run(); }); } });
+  run();
+}
 function openTool(t, prefill, missing){
   if(!t) return;   // aic-v68: bỏ qua phần tử data-t không phải node
   if(t.links){ openLinks(t); return; }   // My Google: danh sách lối tắt
@@ -739,6 +781,7 @@ function openTool(t, prefill, missing){
     var v=prefill&&prefill[f.k]!=null?prefill[f.k]:"";
     h+='<div class="fld" data-k="'+f.k+'"'+(f.when?' data-wk="'+f.when[0]+'" data-wv="'+esc(f.when[1])+'"':'')+'><label>'+esc(f.label)+(f.req?' <i>*</i>':'')+'</label>';
     if(f.type==="select"){ h+='<select name="'+f.k+'">'+f.opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(String(o[0])===String(v)?' selected':'')+'>'+esc(o[1])+'</option>';}).join("")+'</select>'; }
+    else if(f.type==="textarea") h+='<textarea name="'+f.k+'" rows="3"'+(f.ph?' placeholder="'+esc(f.ph.replace(/\\n/g,"\n"))+'"':'')+'>'+esc(v)+'</textarea>';
     else h+='<input name="'+f.k+'" type="text"'+(f.mode?' inputmode="'+f.mode+'"':'')+' value="'+esc(v)+'">';
     if(f.sub) h+='<div class="sub" '+(f.lookup?'':'')+'>'+esc(f.sub)+'</div>';
     h+='</div>';
@@ -749,7 +792,7 @@ function openTool(t, prefill, missing){
   else if(t.risk==="R2") h+='<div class="note">Việc này ghi lên hệ thống VNPT. Hệ thống sẽ dừng lại chờ anh xác nhận, anh tự bấm Lưu trên máy tính.</div>';
   else if(t.id==="phan_loai") h+='<div class="note info">Chạy thử trước, chưa copy file. Anh xem kết quả rồi mới bấm “Chạy thật”.</div>';
   h+='<button class="btn" type="submit" id="btnSend">Gửi lệnh</button><button class="btn sec" type="button" id="btnClose">Đóng</button></form>';
-  var mine=JOBS.filter(function(j){return j.tool===t.id;}).slice(0,5);
+  var mine=JOBS.filter(function(j){ var dv=(j.params||{}).dich_vu; return t.jobTool ? (j.tool===t.jobTool && dv===t.id) : (j.tool===t.id && !(t.id==="bao_gia" && dv==="bien_ban_hd")); }).slice(0,5);
   if(mine.length) h+='<h3 class="sec">Lệnh gần đây của công cụ này</h3>'+jobRows(mine);
   openSheet(h);
   var form=el("tf");
@@ -773,6 +816,7 @@ function openTool(t, prefill, missing){
     if(!tongIn.value) autoPrice();
   }
   el("btnClose").onclick=closeSheet;
+  if(t.id==="bien_ban_hd") bbHdAuto(form);
   var mstIn=form.elements.mst, tenIn=form.elements.ten;
   if(mstIn && tenIn){
     var lastQ="";
@@ -793,6 +837,7 @@ function openTool(t, prefill, missing){
     });
     if(p.mst && !/^(\d{10}(-?\d{3})?|\d{12}|\d{9})$/.test(p.mst)) miss.push("Mã số thuế (10, 12 hoặc 13 số)");
     if(miss.length){ toast("Cần nhập: "+miss[0]); return; }
+    if(t.id==="bien_ban_hd"){ var trong=[].concat(String(p.truoc||"").split("\n"),String(p.sau||"").split("\n")).filter(function(x){ return /:\s*$/.test(x.trim()); }); if(trong.length){ toast("Chưa điền: "+trong[0].replace(/:\s*$/,"")); return; } }
     if(t.build) p=t.build(p);
     el("btnSend").disabled=true; el("btnSend").textContent="Đang gửi…";
     submitJob(t,p).then(function(r){

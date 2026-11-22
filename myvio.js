@@ -26,6 +26,7 @@
     ".mvt small{display:block;font-size:12px;color:var(--mute);margin-top:2px}.mvt small .red{color:#B23A34;font-weight:700}.mvt small .amb{color:#A15C00;font-weight:700}" +
     ".mvg{display:flex;gap:6px;flex:none}.mvg button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font:inherit;font-size:12px;cursor:pointer;color:var(--blue)}" +
     ".mvg button.pri{background:var(--blue);color:#fff;border-color:var(--blue)}" +
+    ".mvg:has(button[data-br]){flex-direction:column;align-items:stretch}.mvg button[data-br]{border-color:#1E7A46;color:#1E7A46}" +
     ".mvnote{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;background:#fff}.mvnote.pin{border-color:#F2C14E;background:#FFFBEB}" +
     ".mvnote p{margin:0;font-size:14px;white-space:pre-wrap;word-break:break-word}.mvnote small{display:block;color:var(--mute);font-size:12px;margin-top:6px}" +
     ".mvnote .mvg{margin-top:8px}.mvempty{color:var(--mute);font-size:13px;padding:14px 2px}" +
@@ -227,7 +228,7 @@
       var v = it.v;
       h += '<div class="mvi ' + (v.uu_tien === "cao" ? "cao" : "") + '">' + (it.k === "viec" ? '<button type="button" class="mvck" data-ck="' + esc(v.id) + '" aria-label="Xong"></button>' : "") +
         '<div class="mvt" data-bv="' + i + '"><b>' + (v.uu_tien === "cao" ? "❗ " : "") + esc(v.tieu_de) + '</b><small><span class="red">' + it.why + "</span></small>" + (it.k === "goi" && v.khach ? "<small>" + esc(v.khach) + "</small>" : "") + "</div>" +
-        '<div class="mvg"><button type="button" class="pri" data-bp="' + i + '">★ Ưu tiên</button>' + (it.k === "goi" ? '<button type="button" data-bx="' + i + '">Bỏ</button>' : "") + "</div></div>";
+        '<div class="mvg"><button type="button" class="pri" data-bp="' + i + '">★ Ưu tiên</button>' + (it.k === "goi" && /^hh:/.test(v.key || "") ? '<button type="button" data-br="' + i + '">✓ Đã gia hạn</button>' : "") + (it.k === "goi" ? '<button type="button" data-bx="' + i + '">Bỏ</button>' : "") + "</div></div>";
     });
     return h;
   }
@@ -254,6 +255,51 @@
     }
     el("mvPick").onclick = function (e) { var b = e.target.closest("[data-pk]"); if (b) go(b.getAttribute("data-pk")); };
     el("mvPok").onclick = function () { var d = el("mvPd").value; if (!d) { toast("Chọn ngày"); return; } go(d + " " + (el("mvPt").value || "09:00")); };
+  }
+
+  /* ---------------- ĐÃ GIA HẠN: ghi hạn mới, ẩn khỏi Bỏ lỡ, (tùy chọn) hẹn nhắc lại trước hạn mới ---------------- */
+  function addMonths(d, m) { var x = new Date(d.getFullYear(), d.getMonth() + m, 1), last = new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate(); x.setDate(Math.min(d.getDate(), last)); return x; }
+  function dmy(h) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(h || ""); return m ? m[3] + "/" + m[2] + "/" + m[1] : (h || ""); }
+  function goiMonths(t) {   // đọc thời hạn từ tên gói: "CA 3 năm" -> 36, "IVAN 10 18 tháng" -> 18; không đọc được -> 12
+    var s = String(t || "").split("–")[0], m, last = null, re = /(\d+)\s*(năm|nam|tháng|thang)/gi;
+    while ((m = re.exec(s))) last = m;
+    if (!last) return 12; var n = +last[1], mo = /^n/i.test(last[2]) ? n * 12 : n; return mo > 0 && mo <= 120 ? mo : 12;
+  }
+  function renewSheet(it) {
+    var v = it.v, mo0 = goiMonths(v.tieu_de), now = new Date(), opts = [12, 24, 36, 48, 60];
+    if (opts.indexOf(mo0) < 0) opts.push(mo0); opts.sort(function (a, b) { return a - b; });
+    var goiTxt = String(v.tieu_de || "").replace(/^Gọi gia hạn\s*/i, "").split("–")[0].trim() || "dịch vụ";
+    var h = '<div class="sh-h"><span class="ic">' + svg("vio") + '</span><div><b>✓ Đã gia hạn</b><div class="sub">' + esc(v.khach || v.tieu_de) + " · " + esc(goiTxt) + " · hạn cũ " + esc(dmy(v.han)) + "</div></div></div>" +
+      '<div class="fld"><label>Ngày bắt đầu kỳ mới</label><input id="mvRs" type="date" value="' + ymd(now) + '"></div>' +
+      '<div class="fld"><label>Thời hạn</label><select id="mvRm">' + opts.map(function (m) { return '<option value="' + m + '"' + (m === mo0 ? " selected" : "") + ">" + (m % 12 === 0 ? m / 12 + " năm" : m + " tháng") + "</option>"; }).join("") + "</select></div>" +
+      '<div class="fld"><label>Hạn mới (tự tính, sửa được)</label><input id="mvRh" type="date"></div>' +
+      '<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0 10px"><input id="mvRc" type="checkbox" checked style="width:auto;flex:none;margin:0"> Nhắc gọi gia hạn lại trước hạn mới 30 ngày</label>' +
+      '<button class="btn" type="button" id="mvRok">Xác nhận đã gia hạn</button>' +
+      '<p class="sh-d" style="margin-top:8px">Dòng này sẽ ẩn khỏi Bỏ lỡ và ghi vào mục Đã xong. Anh nhớ cập nhật ngày mới trong Danh sách khách hàng để bảng hết hạn đồng bộ đúng.</p>';
+    openSheet(h);
+    function calc() { var s = el("mvRs").value; if (!s) return; el("mvRh").value = ymd(addMonths(new Date(s + "T00:00:00"), +el("mvRm").value)); }
+    el("mvRs").onchange = calc; el("mvRm").onchange = calc; calc();
+    el("mvRok").onclick = function () {
+      var s = el("mvRs").value, hn = el("mvRh").value, btn = el("mvRok");
+      if (!s || !hn) { toast("Chọn ngày bắt đầu và hạn mới"); return; }
+      if (hn <= s) { toast("Hạn mới phải sau ngày bắt đầu"); return; }
+      var cb = el("mvRc").checked; btn.disabled = true; btn.textContent = "Đang lưu…";
+      var note = "Gia hạn " + goiTxt + ": bắt đầu " + dmy(s) + ", hạn mới " + dmy(hn) + " (hạn cũ " + dmy(v.han) + ")";
+      addViec({ loai: "viec", tieu_de: "Đã gia hạn " + goiTxt + " – " + (v.khach || ""), khach: v.khach, mst: v.mst, han: "", uu_tien: "tb", nhom: v.nhom || "VNPT", ghi_chu: note, nguon: v.key }, true)
+        .then(function (nv) {
+          return api("mv.done", { id: nv.id, xong: true }).then(function () {
+            M.viec = M.viec.filter(function (x) { return x.id !== nv.id; }); nv.trang_thai = "xong"; nv.xong_luc = "vừa xong"; M.xong.unshift(nv); saveCache(); badge();
+          });
+        })
+        .then(function () {
+          if (!cb) return;
+          var rd = new Date(hn + "T00:00:00"); rd.setDate(rd.getDate() - 30); var t0 = new Date(); t0.setHours(0, 0, 0, 0); if (rd <= t0) return;   // hạn mới quá gần: không hẹn
+          return addViec({ loai: "viec", tieu_de: "Gọi gia hạn " + goiTxt + " – " + (v.khach || ""), khach: v.khach, mst: v.mst, han: ymd(rd) + " 09:00", uu_tien: "tb", nhom: v.nhom || "VNPT",
+            ghi_chu: "Hạn dịch vụ " + dmy(hn), nguon: String(v.key).replace(/:[^:]*$/, ":" + hn) }, true);
+        })
+        .then(function () { toast("Đã ghi gia hạn · hạn mới " + dmy(hn)); openMyVio("bo_lo"); })
+        .catch(function (err) { btn.disabled = false; btn.textContent = "Xác nhận đã gia hạn"; toast("Chưa hoàn tất: " + (err && err.message || "lỗi") + ". Bấm lại để thử."); load(false); });
+    };
   }
 
   function tabsHtml() {
@@ -338,9 +384,10 @@
     var a = t.dataset;
     if (a.vo != null || a.vi != null || a.vm != null || a.vh != null || a.vk != null) { voClick(a); return; }   // nút giọng nói
     if (a.bl != null) { M.tab = "bo_lo"; openMyVio("bo_lo"); return; }   // dòng cảnh báo ở Hôm nay
-    if (a.bp != null || a.bx != null || a.bv != null) {   // tab Bỏ lỡ: ưu tiên / bỏ / mở form
-      var bi = M.blItems[+(a.bp != null ? a.bp : a.bx != null ? a.bx : a.bv)]; if (!bi) return;
+    if (a.bp != null || a.bx != null || a.bv != null || a.br != null) {   // tab Bỏ lỡ: ưu tiên / bỏ / mở form / đã gia hạn
+      var bi = M.blItems[+(a.bp != null ? a.bp : a.bx != null ? a.bx : a.br != null ? a.br : a.bv)]; if (!bi) return;
       if (a.bp != null) prioSheet(bi);
+      else if (a.br != null) renewSheet(bi);
       else if (a.bx != null) addViec({ tieu_de: bi.v.tieu_de, nguon: bi.v.key, trang_thai: "huy" }, true).then(function () { toast("Đã bỏ qua"); render(); }).catch(function () {});
       else if (bi.k === "viec") editForm(bi.v);
       else editForm({ tieu_de: bi.v.tieu_de, khach: bi.v.khach, mst: bi.v.mst, han: bi.v.han, uu_tien: bi.v.uu_tien, nhom: bi.v.nhom, ghi_chu: bi.v.ghi_chu, nguon: bi.v.key }, true);

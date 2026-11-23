@@ -9,6 +9,7 @@
     ".ddchips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.ddchips::-webkit-scrollbar{display:none}" +
     ".ddchips button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:12px;padding:7px 12px;font:inherit;text-align:center;line-height:1.25;color:var(--ink,#1b2430)}" +
     ".ddchips button b{display:block;font-size:14px}.ddchips button small{display:block;font-size:11.5px;color:var(--mute)}.ddchips button.on{background:#0B3D91;border-color:#0B3D91;color:#fff}.ddchips button.on small{color:#D6E2FF}" +
+    ".ddchips.ddwrap{flex-wrap:wrap;overflow:visible;gap:6px}.ddchips.ddwrap button{padding:6px 10px;min-width:58px}" +
     ".ddseg{display:flex;gap:8px;margin:2px 0 10px}.ddseg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:22px;padding:9px 6px;font:inherit;font-weight:600;color:#0B3D91}.ddseg button.on{background:#0B3D91;border-color:#0B3D91;color:#fff}" +
     ".ddsum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}.ddsum div{border-radius:14px;padding:10px 8px;text-align:center;background:#EEF3FB;color:#0B3D91}.ddsum b{display:block;font-size:22px;line-height:1.2}.ddsum small{display:block;font-size:12px;color:var(--mute)}" +
     ".ddsum div.bad{background:#FBEAE9;color:#B23A34}.ddsum div.warn{background:#FFF3DC;color:#8A5200}.ddsum div.ok{background:#E6F5EC;color:#1E7A46}" +
@@ -146,7 +147,7 @@
     fixSel();
     if (!D.day) { box.innerHTML = '<div class="note">Chưa có dữ liệu điểm danh. Bấm “Lấy báo cáo mới nhất” (máy tính cần bật, Chrome đang đăng nhập vnEdu THPT Chơn Thành).</div>'; return; }
     var ds = days(D.b), C = calc(), tp = pct(C.tot.n, C.tot.si);
-    var h = '<div class="ddchips" id="ddDays">' + ds.slice(-14).map(function (d) {
+    var h = '<div class="ddchips ddwrap" id="ddDays">' + ds.slice(-14).map(function (d) {
       return '<button type="button" data-d="' + d + '" class="' + (d === D.day ? "on" : "") + '"><b>' + vn(d) + "</b><small>" + thu(d) + "</small></button>";
     }).join("") + "</div>";
     h += '<div class="ddseg" id="ddB"><button type="button" data-b="s" class="' + (D.b === "s" ? "on" : "") + '">Buổi sáng</button><button type="button" data-b="c" class="' + (D.b === "c" ? "on" : "") + '">Buổi chiều</button></div>';

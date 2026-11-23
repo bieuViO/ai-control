@@ -18,6 +18,9 @@
     ".ddl{width:100%;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px;margin-top:8px;text-align:left;font:inherit;display:block;color:var(--ink,#1b2430)}" +
     ".ddl .r1{display:flex;justify-content:space-between;align-items:center;gap:8px}.ddl .r1 b{font-size:16px}.ddl .pc{font-weight:700;border-radius:10px;padding:2px 9px;font-size:14px}" +
     ".ddl .pc.bad{background:#FBEAE9;color:#B23A34}.ddl .pc.warn{background:#FFF3DC;color:#8A5200}.ddl .pc.ok{background:#E6F5EC;color:#1E7A46}" +
+    ".ddst4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.ddst4 span{background:#F4F6FA;border-radius:10px;padding:6px 2px;text-align:center;font-size:11px;line-height:1.25;color:var(--mute)}.ddst4 b{display:block;font-size:17px;color:#1b2430}" +
+    ".ddst4 .ok b{color:#1E7A46}.ddst4 .ph b{color:#0B3D91}.ddst4 .kp{background:#FBEAE9}.ddst4 .kp b{color:#B23A34}" +
+    ".ddsum .tap{cursor:pointer;box-shadow:inset 0 0 0 2px #0B3D91}.ddsum .tap small.hint{color:#0B3D91;font-weight:600}.ddbk{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;font:inherit;font-weight:600;color:#0B3D91;margin:4px 0 6px}.ddcls .nm{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;font-size:14px}.ddcls .nm div{padding:3px 0}.ddcls .nm em{font-style:normal;color:#1E7A46;font-size:12px;margin-left:4px}" +
     ".ddl .r2{font-size:12.5px;color:var(--mute);margin-top:3px}.ddbar{height:6px;border-radius:4px;background:#E6EAF0;margin-top:6px;overflow:hidden}.ddbar i{display:block;height:100%}" +
     ".ddl .nm{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px;font-size:13.5px}.ddl .nm div{padding:2px 0}.ddl .nm em{font-style:normal;color:#1E7A46;font-size:12px;margin-left:4px}" +
     ".ddcp{margin-top:8px;border:0;background:#EEF3FB;color:#0B3D91;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:600}" +
@@ -25,7 +28,7 @@
     ".ddcap{font-size:12px;color:var(--mute);margin:6px 0}";
   document.head.appendChild(stl);
 
-  var D = { siso: {}, buoi: [], hs: [], cap: "", day: "", b: "s", minStreak: 3, open: {}, busy: false };
+  var D = { siso: {}, buoi: [], hs: [], cap: "", day: "", b: "s", minStreak: 3, open: {}, busy: false, view: "" };
 
   function z(n) { return ("0" + n).slice(-2); }
   function noAcc(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D"); }
@@ -104,6 +107,40 @@
   }
   function setMsg(t) { var m = el("ddMsg"); if (m) m.innerHTML = t ? '<div class="note err" style="margin-top:10px">' + esc(t) + "</div>" : ""; }
 
+  /* Văn bản gửi GVCN cho 1 lớp */
+  function classText(o, id) {
+    return "Lớp " + o.lop + " – chưa điểm danh " + bn() + " " + vn(D.day) + " (" + o.n + "/" + o.si + " em):\n" +
+      o.ds.slice().sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); }).map(function (x, i) { return (i + 1) + ". " + x.ten + (x.m[id] ? " (có phép)" : " (chưa rõ lý do)"); }).join("\n") +
+      "\nĐề nghị GVCN kiểm tra, liên hệ phụ huynh và báo lại.";
+  }
+  /* Màn danh sách học sinh chưa điểm danh, gom theo lớp */
+  function listHtml(C) {
+    var L = C.list.filter(function (o) { return o.n > 0; }).sort(function (a, b) { return lopCmp(a.lop, b.lop); });
+    var h = '<button type="button" class="ddbk" id="ddBack">← Về báo cáo</button>';
+    h += '<div class="ddh">Chưa điểm danh: ' + C.tot.n + " em, " + L.length + ' lớp <small>(' + vn(D.day) + ", " + bn() + ")</small></div>";
+    if (!L.length) return h + '<p class="sub">Tất cả học sinh đã điểm danh.</p>';
+    h += '<button type="button" class="ddcp" id="ddCpEvery" style="width:100%;margin:0 0 4px">📋 Copy cả danh sách (gửi Ban giám hiệu)</button>';
+    L.forEach(function (o, i) {
+      h += '<div class="ddl ddcls" style="cursor:default"><div class="r1"><b>' + esc(o.lop) + '</b><span class="pc bad">' + o.n + " em</span></div>" +
+        '<div class="r2">Sĩ số ' + o.si + (o.ph ? " · có phép " + o.ph : "") + (o.n - o.ph ? " · không phép " + (o.n - o.ph) : "") + "</div>" +
+        '<div class="nm">' + o.ds.slice().sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); }).map(function (x, k) { return "<div>" + (k + 1) + ". " + esc(x.ten) + (x.m[C.id] ? "<em>có phép</em>" : "") + "</div>"; }).join("") +
+        '</div><button type="button" class="ddcp" data-c2="' + i + '">📋 Copy gửi GVCN ' + esc(o.lop) + "</button></div>";
+    });
+    D._L = L; return h;
+  }
+  function wireList(C) {
+    el("ddDays").onclick = function (e) { var b = e.target.closest("[data-d]"); if (b) { D.day = b.getAttribute("data-d"); D.open = {}; render(); } };
+    el("ddB").onclick = function (e) { var b = e.target.closest("[data-b]"); if (b) { D.b = b.getAttribute("data-b"); D.open = {}; render(); } };
+    el("ddBody").onclick = function (e) {
+      if (e.target.closest("#ddBack")) { D.view = ""; render(); return; }
+      if (e.target.closest("#ddCpEvery")) {
+        copy("Học sinh chưa điểm danh " + bn() + " " + vn(D.day) + " (" + C.tot.n + " em):\n\n" + (D._L || []).map(function (o) { return classText(o, C.id); }).join("\n\n"));
+        return;
+      }
+      var b2 = e.target.closest("[data-c2]"); if (b2) copy(classText(D._L[+b2.getAttribute("data-c2")], C.id));
+    };
+  }
+
   function render() {
     var box = el("ddBody"); if (!box) return;
     fixSel();
@@ -113,8 +150,9 @@
       return '<button type="button" data-d="' + d + '" class="' + (d === D.day ? "on" : "") + '"><b>' + vn(d) + "</b><small>" + thu(d) + "</small></button>";
     }).join("") + "</div>";
     h += '<div class="ddseg" id="ddB"><button type="button" data-b="s" class="' + (D.b === "s" ? "on" : "") + '">Buổi sáng</button><button type="button" data-b="c" class="' + (D.b === "c" ? "on" : "") + '">Buổi chiều</button></div>';
+    if (D.view === "list") { box.innerHTML = h + listHtml(C); wireList(C); return; }
     var bad = C.list.filter(function (o) { return o.p !== null && o.p < TH_BAD; }).length;
-    h += '<div class="ddsum"><div class="' + cls(tp) + '"><b>' + fp(tp) + "</b><small>đã điểm danh</small></div><div><b>" + C.tot.n + "</b><small>chưa điểm danh / " + C.tot.si + '</small></div><div class="' + (bad ? "bad" : "ok") + '"><b>' + bad + "</b><small>lớp dưới " + TH_BAD + "%</small></div></div>";
+    h += '<div class="ddsum"><div class="' + cls(tp) + '"><b>' + fp(tp) + "</b><small>đã điểm danh</small></div><div class='tap' id='ddAbs' role='button'><b>" + C.tot.n + "</b><small>chưa điểm danh / " + C.tot.si + '</small><small class=\'hint\'>bấm xem danh sách</small></div><div class="' + (bad ? "bad" : "ok") + '"><b>' + bad + "</b><small>lớp dưới " + TH_BAD + "%</small></div></div>";
     h += '<div class="ddcap">' + vn(D.day) + " (" + thu(D.day) + ") · " + bn() + (C.tot.ph ? " · trong số chưa điểm danh có " + C.tot.ph + " em đã được ghi phép" : "") + (D.cap ? " · cập nhật " + esc(capVN(D.cap)) : "") + "</div>";
 
     h += '<div class="ddh">Theo khối</div><div class="ddk">' + C.K.map(function (k) { var p = pct(k.n, k.si); return '<span class="' + cls(p) + '">Khối ' + esc(k.k) + "<b>" + fp(p) + "</b>" + k.n + "/" + k.si + " chưa ĐD</span>"; }).join("") + "</div>";
@@ -123,7 +161,7 @@
     h += C.list.map(function (o, i) {
       var p = o.p, open = D.open[o.lop], c = cls(p);
       var s = '<button type="button" class="ddl" data-l="' + i + '"><div class="r1"><b>' + esc(o.lop) + '</b><span class="pc ' + c + '">' + fp(p) + '</span></div>' +
-        '<div class="r2">Sĩ số ' + o.si + " · chưa điểm danh " + o.n + (o.ph ? " (có phép " + o.ph + ")" : "") + "</div>" +
+        '<div class="ddst4"><span>Sĩ số<b>' + o.si + '</b></span><span class="ok">Có mặt<b>' + Math.max(o.si - o.n, 0) + '</b></span><span class="ph">Vắng có phép<b>' + o.ph + '</b></span><span class="' + (o.n - o.ph > 0 ? "kp" : "") + '">Vắng không phép<b>' + (o.n - o.ph) + "</b></span></div>" +
         '<div class="ddbar"><i style="width:' + (p === null ? 0 : p) + "%;background:" + (c === "bad" ? "#B23A34" : c === "warn" ? "#D98A00" : "#2E9B5F") + '"></i></div>';
       if (open && o.ds.length) {
         s += '<div class="nm">' + o.ds.slice().sort(function (a, b) { return a.ten.localeCompare(b.ten, "vi"); }).map(function (x) { return "<div>" + esc(x.ten) + (x.m[C.id] ? "<em>có phép</em>" : "") + "</div>"; }).join("") +
@@ -151,6 +189,7 @@
   function wire(C, st) {
     el("ddDays").onclick = function (e) { var b = e.target.closest("[data-d]"); if (b) { D.day = b.getAttribute("data-d"); D.open = {}; render(); } };
     el("ddB").onclick = function (e) { var b = e.target.closest("[data-b]"); if (b) { D.b = b.getAttribute("data-b"); D.open = {}; render(); } };
+    el("ddAbs").onclick = function () { D.view = "list"; render(); };
     el("ddMin").onclick = function (e) { var b = e.target.closest("[data-n]"); if (b) { D.minStreak = +b.getAttribute("data-n"); render(); } };
     var body = el("ddBody");
     body.onclick = function (e) {

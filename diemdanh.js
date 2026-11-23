@@ -10,6 +10,7 @@
     ".ddchips button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:12px;padding:7px 12px;font:inherit;text-align:center;line-height:1.25;color:var(--ink,#1b2430)}" +
     ".ddchips button b{display:block;font-size:14px}.ddchips button small{display:block;font-size:11.5px;color:var(--mute)}.ddchips button.on{background:#0B3D91;border-color:#0B3D91;color:#fff}.ddchips button.on small{color:#D6E2FF}" +
     ".ddchips.ddwrap{flex-wrap:wrap;overflow:visible;gap:6px}.ddchips.ddwrap button{padding:6px 10px;min-width:58px}" +
+    ".dddate{display:flex;gap:8px;align-items:center;margin:4px 0 10px}.ddnav{flex:0 0 46px;height:46px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:24px;line-height:1;color:#0B3D91}.ddnav:disabled{opacity:.3}.ddpick{position:relative;flex:1;height:46px;border:1px solid var(--line);background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#0B3D91}.ddpick small{font-weight:400;color:var(--mute);font-size:13px;margin-left:5px}.ddpick input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer}" +
     ".ddseg{display:flex;gap:8px;margin:2px 0 10px}.ddseg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:22px;padding:9px 6px;font:inherit;font-weight:600;color:#0B3D91}.ddseg button.on{background:#0B3D91;border-color:#0B3D91;color:#fff}" +
     ".ddsum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}.ddsum div{border-radius:14px;padding:10px 8px;text-align:center;background:#EEF3FB;color:#0B3D91}.ddsum b{display:block;font-size:22px;line-height:1.2}.ddsum small{display:block;font-size:12px;color:var(--mute)}" +
     ".ddsum div.bad{background:#FBEAE9;color:#B23A34}.ddsum div.warn{background:#FFF3DC;color:#8A5200}.ddsum div.ok{background:#E6F5EC;color:#1E7A46}" +
@@ -130,7 +131,7 @@
     D._L = L; return h;
   }
   function wireList(C) {
-    el("ddDays").onclick = function (e) { var b = e.target.closest("[data-d]"); if (b) { D.day = b.getAttribute("data-d"); D.open = {}; render(); } };
+    wireDays();
     el("ddB").onclick = function (e) { var b = e.target.closest("[data-b]"); if (b) { D.b = b.getAttribute("data-b"); D.open = {}; render(); } };
     el("ddBody").onclick = function (e) {
       if (e.target.closest("#ddBack")) { D.view = ""; render(); return; }
@@ -142,14 +143,33 @@
     };
   }
 
+  /* Thanh chọn ngày: ‹ ngày trước · bấm giữa để mở lịch · ngày sau › */
+  function dayBar(ds) {
+    var i = ds.indexOf(D.day), prev = i > 0 ? ds[i - 1] : "", next = i >= 0 && i < ds.length - 1 ? ds[i + 1] : "";
+    return '<div class="dddate" id="ddDays"><button type="button" class="ddnav" data-d="' + prev + '"' + (prev ? "" : " disabled") + ' aria-label="Ngày trước">‹</button>' +
+      '<label class="ddpick">' + vn(D.day) + "<small>(" + thu(D.day) + ') ▾</small><input type="date" id="ddPick" value="' + D.day + '" min="' + ds[0] + '" max="' + ds[ds.length - 1] + '"></label>' +
+      '<button type="button" class="ddnav" data-d="' + next + '"' + (next ? "" : " disabled") + ' aria-label="Ngày sau">›</button></div>';
+  }
+  function wireDays() {
+    var box = el("ddDays"), pk = el("ddPick"); if (!box) return;
+    box.onclick = function (e) { var b = e.target.closest("[data-d]"); if (b && b.getAttribute("data-d")) { D.day = b.getAttribute("data-d"); D.open = {}; render(); } };
+    pk.onclick = function () { try { if (pk.showPicker) pk.showPicker(); } catch (x) { } };
+    pk.onchange = function () {
+      var v = pk.value, ds = days(D.b); if (!v) return;
+      if (ds.indexOf(v) < 0) {    // ngày không có dữ liệu → lấy ngày gần nhất trước đó (hoặc ngày đầu tiên)
+        var best = ""; ds.forEach(function (d) { if (d <= v) best = d; });
+        var pick = best || ds[0]; toast("Không có dữ liệu ngày " + vn(v) + ", chuyển sang " + vn(pick)); v = pick;
+      }
+      D.day = v; D.open = {}; render();
+    };
+  }
+
   function render() {
     var box = el("ddBody"); if (!box) return;
     fixSel();
     if (!D.day) { box.innerHTML = '<div class="note">Chưa có dữ liệu điểm danh. Bấm “Lấy báo cáo mới nhất” (máy tính cần bật, Chrome đang đăng nhập vnEdu THPT Chơn Thành).</div>'; return; }
     var ds = days(D.b), C = calc(), tp = pct(C.tot.n, C.tot.si);
-    var h = '<div class="ddchips ddwrap" id="ddDays">' + ds.slice(-14).map(function (d) {
-      return '<button type="button" data-d="' + d + '" class="' + (d === D.day ? "on" : "") + '"><b>' + vn(d) + "</b><small>" + thu(d) + "</small></button>";
-    }).join("") + "</div>";
+    var h = dayBar(ds);
     h += '<div class="ddseg" id="ddB"><button type="button" data-b="s" class="' + (D.b === "s" ? "on" : "") + '">Buổi sáng</button><button type="button" data-b="c" class="' + (D.b === "c" ? "on" : "") + '">Buổi chiều</button></div>';
     if (D.view === "list") { box.innerHTML = h + listHtml(C); wireList(C); return; }
     var bad = C.list.filter(function (o) { return o.p !== null && o.p < TH_BAD; }).length;
@@ -188,7 +208,7 @@
   }
 
   function wire(C, st) {
-    el("ddDays").onclick = function (e) { var b = e.target.closest("[data-d]"); if (b) { D.day = b.getAttribute("data-d"); D.open = {}; render(); } };
+    wireDays();
     el("ddB").onclick = function (e) { var b = e.target.closest("[data-b]"); if (b) { D.b = b.getAttribute("data-b"); D.open = {}; render(); } };
     el("ddAbs").onclick = function () { D.view = "list"; render(); };
     el("ddMin").onclick = function (e) { var b = e.target.closest("[data-n]"); if (b) { D.minStreak = +b.getAttribute("data-n"); render(); } };

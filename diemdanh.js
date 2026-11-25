@@ -231,13 +231,19 @@
     };
   }
 
-  function load() {
+  /* Chọn buổi mới nhất có dữ liệu (ngày lớn nhất; cùng ngày thì buổi chiều sau buổi sáng) */
+  function gotoLatest() {
+    var best = "";
+    D.buoi.forEach(function (id) { var p = pid(id), k = p.iso + (p.b === "s" ? "0" : "1"); if (k > best) { best = k; D.day = p.iso; D.b = p.b; } });
+  }
+  function load(latest) {
+    if (!el("ddBody")) return Promise.resolve();   // khung Điểm danh đã đóng
     if (!connected()) { setMsg("Chưa kết nối backend"); el("ddBody").innerHTML = ""; return Promise.resolve(); }
-    return api("dd.get", {}).then(function (r) { prepare(r); setMsg(""); render(); },
+    return api("dd.get", {}).then(function (r) { if (!el("ddBody")) return; prepare(r); if (latest) gotoLatest(); setMsg(""); render(); },
       function (e) { el("ddBody").innerHTML = ""; setMsg(/Action không hợp lệ|không hỗ trợ|unknown|Không biết/i.test(e.message) ? "Backend chưa có DiemDanh.gs (cần dán vào Apps Script và triển khai lại)." : "Không tải được: " + e.message); });
   }
 
-  /* Nút "Lấy báo cáo mới nhất": gửi lệnh cho extension vnEdu trên máy tính (như Doanh thu). Chờ tối đa ~4 phút. */
+  /* Nút "Lấy báo cáo mới nhất": gửi lệnh cho extension vnEdu trên máy tính (như Doanh thu). Chờ tối đa ~8 phút; xong thì tự tải lại và nhảy tới buổi mới nhất. */
   function refresh() {
     if (D.busy) return; if (!connected()) { toast("Chưa kết nối backend"); return; }
     D.busy = true; var bt = el("ddRef"); if (bt) { bt.disabled = true; bt.textContent = "Đang gửi lệnh cho máy tính…"; }
@@ -247,14 +253,18 @@
       (function poll() {
         api("job.get", { id: id }).then(function (g) {
           var j = g.job || {}, t = String(j.ket_qua || "");
-          if (j.trang_thai === "done") { done("Đã cập nhật điểm danh"); load(); return; }
+          if (j.trang_thai === "done") {
+            done("");
+            load(true).then(function () { toast(el("ddBody") && D.day ? "Đã cập nhật điểm danh đến " + vn(D.day) + " (buổi " + (D.b === "s" ? "sáng" : "chiều") + ")" : "Đã cập nhật điểm danh"); });
+            return;
+          }
           if (j.trang_thai === "error" || j.trang_thai === "cancelled") { done(t || "Máy tính báo lỗi", true); return; }
           if (j.trang_thai === "await_confirm") {
             api("job.update", { id: id, trang_thai: "cancelled", ket_qua: "Đã hủy: extension vnEdu trên máy tính chưa hỗ trợ điểm danh (còn bản cũ)." }).catch(function () { });
             done("Extension vnEdu trên máy tính chưa hỗ trợ lấy điểm danh (cần bản 1.14 trở lên). Chưa sửa gì.", true); return;
           }
           if (bt && t) bt.textContent = t.split("\n")[0].slice(0, 40);
-          if (++n > 120) { done("Máy tính chưa phản hồi. Kiểm tra máy đang bật, Chrome mở và đang đăng nhập vnEdu THPT Chơn Thành.", true); return; }
+          if (++n > 240) { done("Máy tính chưa phản hồi. Kiểm tra máy đang bật, Chrome mở và đang đăng nhập vnEdu THPT Chơn Thành.", true); return; }
           setTimeout(poll, 2000);
         }).catch(function (e) { done("Lỗi: " + e.message, true); });
       })();
@@ -270,7 +280,7 @@
       '<p class="sub" style="margin-top:6px">“Chưa điểm danh” = học sinh có tên trong báo cáo vnEdu “Thống kê học sinh chưa điểm danh”, gồm cả em đã được giáo viên ghi phép.</p>' +
       '<button class="btn sec" id="ddClose">Đóng</button></div>');
     el("ddClose").onclick = closeSheet; el("ddRef").onclick = refresh;
-    load();
+    load(true);
   };
   window.__dd = { D: D, prepare: prepare, calc: calc, streaks: streaks, fixSel: fixSel };   // phục vụ kiểm thử
 })();

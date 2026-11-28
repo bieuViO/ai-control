@@ -352,7 +352,7 @@
       if (M.goi_y.length) h += '<div class="mvh">Gợi ý từ dữ liệu<span>' + M.goi_y.length + "</span></div>" + M.goi_y.map(function (g, i) {
         var tel = sdtOf(g);
         return '<div class="mvi"><div class="mvt" data-gv="' + i + '"><b>' + esc(g.tieu_de) + "</b><small>" + (g.han ? esc(hanLabel(g.han)) + " · " : "") + esc(g.ghi_chu || "") + '</small>' +
-          '<div class="mvq">' + (tel ? '<button type="button" data-gt="' + i + '">📞 Gọi</button>' : "") + '<button type="button" data-gz="' + i + '">💬 Zalo</button><button type="button" data-gb="' + i + '">Báo giá</button></div></div><div class="mvg"><button type="button" class="pri" data-gy="' + i + '">+ Việc</button><button type="button" data-gn="' + i + '">Bỏ</button></div></div>';
+          '<div class="mvq">' + (tel ? '<button type="button" data-gt="' + i + '">📞 Gọi</button>' : "") + '<button type="button" data-gz="' + i + '">💬 Zalo</button><button type="button" data-gb="' + i + '">Báo giá</button>' + (g.khach || g.mst ? '<button type="button" data-gk="' + i + '">👤 Khách</button>' : "") + '</div></div><div class="mvg"><button type="button" class="pri" data-gy="' + i + '">+ Việc</button><button type="button" data-gn="' + i + '">Bỏ</button></div></div>';
       }).join("");
       else if (!M.loaded) h += '<div class="mvempty">Đang tải…</div>';
     } else if (M.tab === "bo_lo") {
@@ -401,6 +401,8 @@
     } else if (a.un) {
       var u = find(a.un); if (!u) return; M.xong = M.xong.filter(function (x) { return x.id !== u.id; }); u.trang_thai = "mo"; M.viec.push(u); saveCache(); badge(); render();
       api("mv.done", { id: u.id, xong: false }).catch(function (err) { toast("Lỗi: " + err.message); load(false); });
+    } else if (a.gk != null) {   // Gợi ý: xem chi tiết khách (khach.js: dịch vụ, công nợ từng tháng, việc đang theo dõi)
+      var gk = M.goi_y[+a.gk]; if (gk && typeof openKhach === "function") openKhach({ khach: gk.khach, mst: gk.mst }); else toast("Chưa tải được khach.js, hãy tải lại trang");
     } else if (a.gv != null || a.gt != null || a.gz != null || a.gb != null) {
       var gi = M.goi_y[+(a.gv != null ? a.gv : a.gt != null ? a.gt : a.gz != null ? a.gz : a.gb)]; if (!gi) return;
       if (a.gv != null) editForm({ tieu_de: gi.tieu_de, khach: gi.khach, mst: gi.mst, han: gi.han, uu_tien: gi.uu_tien, nhom: gi.nhom, ghi_chu: gi.ghi_chu, nguon: gi.key }, true);   // bấm vào dòng gợi ý: mở form điền sẵn

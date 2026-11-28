@@ -78,10 +78,12 @@
     if (cho) h += '<div class="brh">Chờ xác nhận</div><div class="brlist">' + ht.cho_xac_nhan.map(function (j) { return '<div data-j="' + esc(j.id) + '"><span>' + esc(nodeName(j.tool)) + "</span><em>" + esc(j.luc) + "</em></div>"; }).join("") + "</div>";
     if (loi) h += '<div class="brh">Lỗi 24 giờ qua</div><div class="brlist">' + ht.loi_24h.map(function (j) { return '<div data-j="' + esc(j.id) + '"><span>' + esc(nodeName(j.tool) + ": " + j.ket_qua) + "</span><em>" + esc(j.luc) + "</em></div>"; }).join("") + "</div>";
     if (hh.danh_sach && hh.danh_sach.length) h += '<div class="brh" id="brHH">Sắp hết hạn</div><div class="brlist">' + hh.danh_sach.slice(0, 6).map(function (x) {
-      return "<div><span>" + esc(x.khach) + " · " + esc(x.goi) + "</span><em>" + (x.con_ngay < 0 ? "quá " + (-x.con_ngay) + " ngày" : "còn " + x.con_ngay + " ngày") + "</em></div>"; }).join("") + "</div>";
-    if (cn.top && cn.top.length) h += '<div class="brh">Nợ nhiều nhất</div><div class="brlist">' + cn.top.slice(0, 5).map(function (x) { return "<div><span>" + esc(x.khach) + "</span><em>" + money(x.con_no) + "</em></div>"; }).join("") + "</div>";
+      return '<div data-kh="' + esc(x.khach) + '" data-khm="' + esc(x.mst || "") + '"><span>' + esc(x.khach) + " · " + esc(x.goi) + "</span><em>" + (x.con_ngay < 0 ? "quá " + (-x.con_ngay) + " ngày" : "còn " + x.con_ngay + " ngày") + " ›</em></div>"; }).join("") + "</div>";
+    if (cn.top && cn.top.length) h += '<div class="brh">Nợ nhiều nhất</div><div class="brlist">' + cn.top.slice(0, 5).map(function (x) { return '<div data-kh="' + esc(x.khach) + '"><span>' + esc(x.khach) + "</span><em>" + money(x.con_no) + " ›</em></div>"; }).join("") + "</div>";
     box.innerHTML = h;
     box.onclick = function (e) {
+      var kh = e.target.closest("[data-kh]");   // bấm 1 khách (Sắp hết hạn / Nợ nhiều nhất) → khung chi tiết khách (khach.js)
+      if (kh) { if (typeof openKhach === "function") openKhach({ khach: kh.getAttribute("data-kh"), mst: kh.getAttribute("data-khm") || "" }); else toast("Chưa tải được khach.js, hãy tải lại trang"); return; }
       var g = e.target.closest("[data-go]"); if (!g) return; var k = g.getAttribute("data-go");
       if (k === "act") openActivity(); else if (k === "hh") { var a = el("brHH"); if (a) a.scrollIntoView({ behavior: "smooth" }); else send("Khách nào sắp hết hạn?"); }
       else openTool(toolById(k));

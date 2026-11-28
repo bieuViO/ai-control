@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Điểm danh THPT Chơn Thành</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+/* Layout: một cột, ưu tiên điện thoại. Tóm tắt trước, chi tiết sau. */
+:root{
+  --bg:#F3F6FB; --card:#FFFFFF; --ink:#14233B; --mute:#5E6E87; --line:#DDE5F0;
+  --brand:#0B3D91; --good:#1E7B4F; --good-bg:#E5F4EC; --warn:#B26A00; --warn-bg:#FFF1D6; --bad:#B3261E; --bad-bg:#FBE4E2;
+  --font:"Be Vietnam Pro","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1626; --card:#16213A; --ink:#E8EEF8; --mute:#9DB0CC; --line:#2A3A5A;
+  --brand:#8FB4FF; --good:#6FD3A0; --good-bg:#12372A; --warn:#F2B35C; --warn-bg:#3B2D0F; --bad:#FF9A92; --bad-bg:#40191A;}}
+:root[data-theme="dark"]{
+  --bg:#0E1626; --card:#16213A; --ink:#E8EEF8; --mute:#9DB0CC; --line:#2A3A5A;
+  --brand:#8FB4FF; --good:#6FD3A0; --good-bg:#12372A; --warn:#F2B35C; --warn-bg:#3B2D0F; --bad:#FF9A92; --bad-bg:#40191A; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
+body{padding:0 0 32px}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+header{background:#0B3D91;color:#fff;padding:18px 0 16px}
+header h1{margin:0;font-size:20px;line-height:1.25;text-wrap:balance}
+header p{margin:4px 0 0;font-size:13px;opacity:.9}
+/* Thanh chọn ngày: ‹ ngày trước · bấm giữa mở lịch · ngày sau › */
+.dates{display:flex;gap:8px;margin:14px 0 0}
+.nav{flex:0 0 46px;height:46px;border:1px solid var(--line);background:var(--card);border-radius:12px;font-size:24px;line-height:1;color:var(--brand);cursor:pointer}
+.nav:disabled{opacity:.3;cursor:default}
+.pick{position:relative;flex:1;height:46px;border:1px solid var(--line);background:var(--card);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--brand)}
+.pick small{font-weight:400;color:var(--mute);font-size:13px;margin-left:6px}
+.pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.seg{display:flex;gap:8px;margin:10px 0 14px}
+.seg button{flex:1;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--brand);font:600 16px var(--font);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);color:#fff;border-color:var(--brand)}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{color:#0E1626}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#0E1626}}
+.seg button:disabled{opacity:.35;cursor:default}
+button:focus-visible,.pick:focus-within{outline:3px solid #6AA0FF;outline-offset:2px}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hero .big{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hero .pct{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.hero .lbl{color:var(--mute);font-size:14px}
+.cell{border-radius:12px;padding:10px 12px;background:var(--bg)}
+.cell b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+.cell span{font-size:12.5px;color:var(--mute)}
+.cell.bad b{color:var(--bad)}.cell.warn b{color:var(--warn)}
+.note{font-size:12.5px;color:var(--mute);margin:10px 2px 0;line-height:1.45}
+h2{font-size:15px;margin:22px 2px 8px;color:var(--ink)}
+.khoi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.khoi div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
+.khoi small{display:block;color:var(--mute);font-size:12.5px}
+.khoi b{display:block;font-size:22px;font-variant-numeric:tabular-nums;margin:2px 0}
+.khoi em{font-style:normal;font-size:12px;color:var(--mute)}
+.ok{color:var(--good)}.mid{color:var(--warn)}.low{color:var(--bad)}
+.lops{display:flex;flex-direction:column;gap:6px}
+.lop{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center}
+.lop .n{font-weight:700;font-size:16px}
+.bar{height:8px;background:var(--bg);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:6px}
+.lop .meta{font-size:12px;color:var(--mute);margin-top:4px}
+.pill{font-size:13px;font-weight:700;padding:3px 9px;border-radius:999px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.ok{background:var(--good-bg)}.pill.mid{background:var(--warn-bg)}.pill.low{background:var(--bad-bg)}
+.chart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px 6px;overflow-x:auto}
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--mute);font:11px var(--font)}
+footer{margin:22px 2px 0;font-size:12px;color:var(--mute);line-height:1.5}
+/* Lớp bấm được + danh sách tên */
+.lop{cursor:pointer;width:100%;text-align:left;font:inherit;color:inherit}
+.lop:focus-visible{outline:3px solid #6AA0FF;outline-offset:2px}
+.lop .chev{font-size:12px;color:var(--mute);margin-left:6px}
+.names{background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;margin:-8px 0 2px;padding:12px}
+.names ol{margin:0 0 10px;padding-left:22px;line-height:1.7;font-size:14.5px}
+.tag{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;margin-left:6px;white-space:nowrap}
+.tag.p{background:var(--good-bg);color:var(--good)}.tag.u{background:var(--bad-bg);color:var(--bad)}
+.btn{display:block;width:100%;height:44px;border-radius:11px;border:0;background:#0B3D91;color:#fff;font:600 15px var(--font);cursor:pointer}
+.btn.sec{background:var(--bg);color:var(--brand);border:1px solid var(--line)}
+.pin{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pin input{flex:1;min-width:120px;height:44px;border:1px solid var(--line);border-radius:11px;padding:0 12px;font:600 18px var(--font);letter-spacing:4px;background:var(--bg);color:var(--ink)}
+.pin .btn{width:auto;padding:0 18px}
+.err{color:var(--bad);font-size:13px;margin-top:6px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#14233B;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;max-width:90vw}
+.cpbox{width:100%;height:160px;margin-top:8px;font:13px var(--font)}
+</style>
+
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Điểm danh THPT Chơn Thành</h1>
+  <p id="cap">Số liệu vnEdu</p>
+</div></header>
+<main class="wrap">
+  <div class="dates" id="dates"></div>
+  <div class="seg" role="group" aria-label="Chọn buổi">
+    <button id="bS" type="button" aria-pressed="true">Buổi sáng</button>
+    <button id="bC" type="button" aria-pressed="false">Buổi chiều</button>
+  </div>
+  <section class="hero" id="hero"></section>
+  <p class="note" id="note"></p>
+
+  <h2>Theo khối</h2>
+  <div class="khoi" id="khoi"></div>
+
+  <h2>Theo lớp (thấp nhất lên đầu, bấm lớp để xem tên)</h2>
+  <div class="lops" id="lops"></div>
+
+  <h2>Số em chưa điểm danh buổi sáng, theo ngày</h2>
+  <div class="chart" id="chart"></div>
+  <p class="note">Cột đỏ là số chưa rõ lý do, cột vàng nhạt là số có phép. Ngày đang xem được tô nền. Bấm vào cột để xem ngày đó.</p>
+
+  <footer>
+    "Chưa điểm danh" là học sinh có tên trong báo cáo vnEdu "Thống kê học sinh chưa điểm danh", gồm cả em đã được giáo viên ghi phép. Ngưỡng màu: dưới 85% đỏ, dưới 95% vàng. Trang hiện 14 ngày gần nhất và tự cập nhật lúc 7:00, 7:15, 13:45, 14:15 các ngày từ thứ Hai đến thứ Bảy. Danh sách tên học sinh được bảo vệ bằng mã PIN, chỉ dành cho Ban giám hiệu và người được giao.
+  </footer>
+</main>
+<script>
+(function(){
+/* Đọc số liệu trực tiếp từ Google Sheet (Apps Script route dd.pub). Tên học sinh chỉ trả về khi đúng PIN (kiểm tra ở máy chủ). */
+var API="https://script.google.com/macros/s/AKfycbyN2eQVgbUqQbsd0TO9zqnwCcnoJN1I7OOONHoIl-hSR3FQVgtKcUMfSmqGJfdbnPwDpw/exec";
+function api(pin){
+  var body={action:"dd.pub"};if(pin)body.pin=pin;
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(j){if(!j||!j.ok)throw new Error((j&&j.error)||"Lỗi máy chủ");return j;});
+}
+function el0(i){return document.getElementById(i);}
+var LOADED=Date.now();
+el0("hero").textContent="Đang tải số liệu mới nhất…";
+var savedPin=null;try{savedPin=localStorage.getItem("dd_pin");}catch(e){}
+api(savedPin).then(function(DD){
+  if(savedPin&&DD.pin!=="ok"){try{localStorage.removeItem("dd_pin");}catch(e){}}
+  start(DD,DD.pin==="ok"?DD.hs:null);
+},function(){el0("hero").textContent="Chưa tải được số liệu. Kiểm tra mạng rồi mở lại trang.";});
+/* Quay lại trang sau hơn 5 phút: tải lại để có số mới */
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&Date.now()-LOADED>300000)location.reload();});
+
+function start(DD,HS0){
+function el(i){return document.getElementById(i);}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+if(!DD.ses){el("hero").textContent="Chưa tải được số liệu. Mở lại trang sau ít phút.";return;}
+
+/* Sĩ số theo lớp, số liệu theo buổi: DB["261126s"] = [[n, có phép] × lớp] */
+var ORDER=[],SISO=[];
+DD.siso.split(",").forEach(function(x){var a=x.split(":");ORDER.push(a[0]);SISO.push(+a[1]);});
+var DB={},DAYS=[];
+DD.ses.split("|").forEach(function(s){
+  var k=s.slice(0,7);DB[k]=s.slice(8).split(" ").map(function(c){var a=c.split(".");return [+a[0],+(a[1]||0)];});
+  var d=k.slice(0,6);if(DAYS.indexOf(d)<0)DAYS.push(d);
+});
+DAYS.sort();
+var CAP=String(DD.cap||"");
+el("cap").textContent="Số liệu vnEdu, cập nhật "+CAP.slice(11,16)+" ngày "+CAP.slice(8,10)+"/"+CAP.slice(5,7)+"/"+CAP.slice(0,4);
+var cur={d:DAYS[DAYS.length-1],b:"s"}, open={};
+if(!DB[cur.d+"s"])cur.b="c"; else if(DB[cur.d+"c"])cur.b="c";   /* ngày mới nhất: ưu tiên buổi muộn nhất */
+if(DB[cur.d+"s"]&&DB[cur.d+"c"]&&CAP.slice(11,13)<"13")cur.b="s";
+
+function iso(d){return "20"+d.slice(0,2)+"-"+d.slice(2,4)+"-"+d.slice(4,6);}
+function vn(d){return d.slice(4,6)+"/"+d.slice(2,4);}
+function thu(d){var n=new Date(iso(d)+"T00:00:00").getDay();return n===0?"CN":"T"+(n+1);}
+function fmt(x){return x.toLocaleString("vi-VN",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";}
+function cls(p){return p<85?"low":(p<95?"mid":"ok");}
+function color(p){return p<85?"var(--bad)":(p<95?"var(--warn)":"var(--good)");}
+function has(d,b){return !!DB[d+b];}
+function fixB(){if(!has(cur.d,cur.b))cur.b=cur.b==="s"?"c":"s";}
+function toast(t){var x=document.createElement("div");x.className="toast";x.textContent=t;document.body.appendChild(x);setTimeout(function(){x.remove();},2600);}
+
+/* ---- Mã PIN: gửi lên máy chủ kiểm tra, đúng thì máy chủ trả danh sách tên ---- */
+var HS=HS0||null;
+function unlock(pin){
+  return api(pin).then(function(j){
+    if(j.pin==="locked")throw new Error("Nhập sai nhiều lần, thử lại sau 15 phút");
+    if(j.pin!=="ok"||!j.hs)throw new Error("Sai mã PIN");
+    HS=j.hs;try{localStorage.setItem("dd_pin",pin);}catch(e){}return HS;
+  });
+}
+function namesOf(lop,id){
+  var out=[];HS.forEach(function(h){if(h[0]!==lop)return;h[2].split(" ").forEach(function(t){var a=t.split("-");if(a[0]===id)out.push({ten:h[1],ph:!!a[1]});});});
+  out.sort(function(a,b){return a.ten.localeCompare(b.ten,"vi");});return out;
+}
+function copyText(lop,list){
+  var t="Lớp "+lop+" – chưa điểm danh "+(cur.b==="s"?"buổi sáng":"buổi chiều")+" "+vn(cur.d)+" ("+list.length+" em):\n";
+  list.forEach(function(x,i){t+=(i+1)+". "+x.ten+" ("+(x.ph?"có phép":"chưa rõ lý do")+")\n";});
+  return t+"Đề nghị GVCN kiểm tra, liên hệ phụ huynh và báo lại.";
+}
+function doCopy(t,box){
+  function fb(){var ta=document.createElement("textarea");ta.className="cpbox";ta.value=t;ta.readOnly=true;box.appendChild(ta);ta.focus();ta.select();
+    var ok=false;try{ok=document.execCommand("copy");}catch(e){}toast(ok?"Đã copy, dán vào Zalo gửi GVCN":"Bấm giữ vào ô chữ để chép");}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("Đã copy, dán vào Zalo gửi GVCN");},fb);else fb();
+}
+function namesBox(lop){
+  var id=cur.d+cur.b;
+  if(!HS){
+    return '<div class="names" data-for="'+lop+'"><div class="pin"><input type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Mã PIN" id="pin_'+lop+'" aria-label="Mã PIN xem tên học sinh"><button type="button" class="btn" data-unlock="'+lop+'">Xem tên</button></div><div class="err" id="err_'+lop+'"></div></div>';
+  }
+  var L=namesOf(lop,id);
+  if(!L.length)return '<div class="names" data-for="'+lop+'">Lớp này không có em nào chưa điểm danh.</div>';
+  return '<div class="names" data-for="'+lop+'"><ol>'+L.map(function(x){return '<li>'+esc(x.ten)+'<span class="tag '+(x.ph?"p":"u")+'">'+(x.ph?"có phép":"chưa rõ")+'</span></li>';}).join("")+'</ol><button type="button" class="btn" data-copy="'+lop+'">📋 Copy gửi GVCN '+lop+'</button></div>';
+}
+
+function dateBar(){
+  var i=DAYS.indexOf(cur.d),prev=i>0?DAYS[i-1]:"",next=i<DAYS.length-1?DAYS[i+1]:"";
+  el("dates").innerHTML='<button type="button" class="nav" data-d="'+prev+'"'+(prev?"":" disabled")+' aria-label="Ngày trước">‹</button>'+
+    '<label class="pick">'+vn(cur.d)+'<small>('+thu(cur.d)+') ▾</small><input type="date" id="pk" value="'+iso(cur.d)+'" min="'+iso(DAYS[0])+'" max="'+iso(DAYS[DAYS.length-1])+'" aria-label="Chọn ngày"></label>'+
+    '<button type="button" class="nav" data-d="'+next+'"'+(next?"":" disabled")+' aria-label="Ngày sau">›</button>';
+  var pk=el("pk");
+  el("dates").onclick=function(e){var b=e.target.closest("[data-d]");if(b&&b.getAttribute("data-d")){cur.d=b.getAttribute("data-d");fixB();open={};render();}};
+  pk.onclick=function(){try{if(pk.showPicker)pk.showPicker();}catch(x){}};
+  pk.onchange=function(){var v=pk.value;if(!v)return;var want=v.slice(2,4)+v.slice(5,7)+v.slice(8,10),best="";
+    DAYS.forEach(function(d){if(d<=want)best=d;});cur.d=best||DAYS[0];fixB();open={};render();};
+}
+
+function render(){
+  dateBar();
+  var A=DB[cur.d+cur.b],L=[],si=0,n=0,ph=0;
+  ORDER.forEach(function(l,i){L.push({lop:l,si:SISO[i],n:A[i][0],ph:A[i][1]});si+=SISO[i];n+=A[i][0];ph+=A[i][1];});
+  var p=(si-n)*100/si,under=L.filter(function(x){return (x.si-x.n)*100/x.si<85;}).length;
+  el("hero").innerHTML='<div class="big"><span class="pct '+cls(p)+'">'+fmt(p)+'</span><span class="lbl">đã điểm danh · '+(cur.b==="s"?"buổi sáng":"buổi chiều")+' '+vn(cur.d)+'</span></div>'+
+    '<div class="cell"><b>'+n+'</b><span>chưa điểm danh / '+si.toLocaleString("vi-VN")+'</span></div>'+
+    '<div class="cell '+(under?"bad":"")+'"><b>'+under+'</b><span>lớp dưới 85%</span></div>'+
+    '<div class="cell"><b>'+ph+'</b><span>trong số đó có phép</span></div>'+
+    '<div class="cell '+((n-ph)?"warn":"")+'"><b>'+(n-ph)+'</b><span>chưa rõ lý do</span></div>';
+  el("note").textContent=(cur.d===CAP.slice(2,4)+CAP.slice(5,7)+CAP.slice(8,10))?"Số liệu ngày này tính đến "+CAP.slice(11,16)+", có thể còn lớp chưa điểm danh xong.":"";
+  var K={};L.forEach(function(x){var k=x.lop.slice(0,2);K[k]=K[k]||{si:0,n:0};K[k].si+=x.si;K[k].n+=x.n;});
+  el("khoi").innerHTML=Object.keys(K).sort().map(function(k){var v=K[k],q=(v.si-v.n)*100/v.si;return '<div><small>Khối '+k+'</small><b class="'+cls(q)+'">'+fmt(q)+'</b><em>'+v.n+'/'+v.si+' chưa ĐD</em></div>';}).join("");
+  L.sort(function(a,b){return ((a.si-a.n)/a.si)-((b.si-b.n)/b.si)||a.lop.localeCompare(b.lop);});
+  el("lops").innerHTML=L.map(function(x){var q=(x.si-x.n)*100/x.si,o=open[x.lop];
+    return '<button type="button" class="lop" data-lop="'+x.lop+'" aria-expanded="'+(o?"true":"false")+'"'+(x.n?"":" disabled")+'><span class="n">'+x.lop+'</span><div><div class="bar"><i style="width:'+q+'%;background:'+color(q)+'"></i></div><div class="meta">Sĩ số '+x.si+' · chưa ĐD '+x.n+(x.n?' (có phép '+x.ph+', chưa rõ '+(x.n-x.ph)+')<span class="chev">'+(o?"▲ ẩn tên":"▼ xem tên")+'</span>':'')+'</div></div><span class="pill '+cls(q)+'">'+fmt(q)+'</span></button>'+(o?namesBox(x.lop):"");}).join("");
+  var bs=el("bS"),bc=el("bC");bs.disabled=!has(cur.d,"s");bc.disabled=!has(cur.d,"c");
+  bs.setAttribute("aria-pressed",cur.b==="s");bc.setAttribute("aria-pressed",cur.b==="c");
+  chart();
+}
+el("lops").onclick=function(e){
+  var u=e.target.closest("[data-unlock]");
+  if(u){var lop=u.getAttribute("data-unlock"),v=(el("pin_"+lop).value||"").trim();u.disabled=true;u.textContent="Đang mở…";
+    unlock(v).then(function(){render();},function(er){u.disabled=false;u.textContent="Xem tên";el("err_"+lop).textContent=(er&&/15 phút/.test(er.message))?er.message:"Mã PIN không đúng. Hỏi anh Biểu (VNPT) để lấy mã.";});return;}
+  var c=e.target.closest("[data-copy]");
+  if(c){var l=c.getAttribute("data-copy");doCopy(copyText(l,namesOf(l,cur.d+cur.b)),c.parentNode);return;}
+  var b=e.target.closest("[data-lop]");if(b&&!b.disabled){var k=b.getAttribute("data-lop");open[k]=!open[k];render();
+    var inp=el("pin_"+k);if(inp)inp.focus();}
+};
+el("lops").onkeydown=function(e){if(e.key==="Enter"&&e.target.id&&e.target.id.indexOf("pin_")===0){var b=e.target.parentNode.querySelector("[data-unlock]");if(b)b.click();}};
+el("bS").onclick=function(){if(has(cur.d,"s")){cur.b="s";open={};render();}};
+el("bC").onclick=function(){if(has(cur.d,"c")){cur.b="c";open={};render();}};
+
+function chart(){
+  var rows=DAYS.filter(function(d){return has(d,"s");}).map(function(d){var n=0,ph=0;DB[d+"s"].forEach(function(c){n+=c[0];ph+=c[1];});return{d:d,n:n,ph:ph};});
+  var W=Math.max(rows.length*26+40,320),H=170,pl=30,pb=26,pt=10,MAX=60,ih=H-pb-pt,bw=16;
+  function y(v){return pt+ih-Math.min(v,MAX)/MAX*ih;}
+  var g="";
+  [0,20,40,60].forEach(function(t){g+='<line x1="'+pl+'" x2="'+W+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y(t)+4)+'" text-anchor="end">'+t+'</text>';});
+  rows.forEach(function(r,i){
+    var x=pl+8+i*26,np=r.n-r.ph,sel=r.d===cur.d;
+    if(sel)g+='<rect x="'+(x-4)+'" y="'+pt+'" width="'+(bw+8)+'" height="'+(ih+pb-6)+'" rx="4" fill="var(--bg)"/>';
+    g+='<rect x="'+x+'" y="'+y(np)+'" width="'+bw+'" height="'+(y(0)-y(np))+'" fill="var(--bad)" opacity="'+(sel?1:.7)+'"/>';
+    g+='<rect x="'+x+'" y="'+y(r.n)+'" width="'+bw+'" height="'+(y(np)-y(r.n))+'" fill="var(--warn)" opacity=".55"/>';
+    if(r.n>MAX)g+='<text x="'+(x+bw/2)+'" y="'+(pt+9)+'" text-anchor="middle">'+r.n+'</text>';
+    g+='<text x="'+(x+bw/2)+'" y="'+(H-8)+'" text-anchor="middle" '+(sel?'style="font-weight:700;fill:var(--ink)"':'')+'>'+r.d.slice(4,6)+'</text>';
+    g+='<rect x="'+(x-4)+'" y="0" width="'+(bw+8)+'" height="'+H+'" fill="transparent" data-day="'+r.d+'" style="cursor:pointer"/>';
+  });
+  el("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="min-width:'+W+'px" role="img" aria-label="Số học sinh chưa điểm danh buổi sáng theo ngày">'+g+'</svg>';
+  el("chart").onclick=function(e){var t=e.target.closest("[data-day]");if(t){cur.d=t.getAttribute("data-day");cur.b="s";open={};render();}};
+}
+render();
+}
+})();
+</script>
+</body>
+</html>
